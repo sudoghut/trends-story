@@ -18,9 +18,14 @@ def get_trending_searches():
     results = search.as_dict()
     return results
 
-res = get_trending_searches()
-res_json = json.dumps(res, indent=2)
-print(type(res_json))
-# print(res)
-with open("trending_searches.txt", "w") as file:
-    file.write(res_json)
+# res = get_trending_searches()
+# res_json = json.dumps(res, indent=2)
+# with open("trending_searches.json", "w") as file:
+#     file.write(res_json)
+
+def mock_get_trending_searches():
+    with open("mock_trending_searches.json", "r") as file:
+        data = json.load(file)
+        return data
+
+res = mock_get_trending_searches()
