@@ -7,7 +7,7 @@ def create_database():
     
     # Create the data table
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS data (
+        CREATE TABLE IF NOT EXISTS serpapi_data (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             query TEXT NOT NULL,
             start_timestamp TEXT,

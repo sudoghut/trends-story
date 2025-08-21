@@ -54,7 +54,7 @@ def save_to_database(data):
         trend_breakdown_str = format_trend_breakdown(trend.get('trend_breakdown', []))
         
         cursor.execute('''
-            INSERT INTO data (
+            INSERT INTO serpapi_data (
                 query, start_timestamp, active, search_volume, increase_percentage,
                 categories, trend_breakdown, serpapi_google_trends_link,
                 news_page_token, serpapi_news_link, date

@@ -1,0 +1,75 @@
+import sqlite3
+import asyncio
+import websockets
+import json
+
+def create_prompt():
+    # Connect to the SQLite database (assumes trends_data.db is in the same directory)
+    conn = sqlite3.connect('trends_data.db')
+    cursor = conn.cursor()
+
+    # Read one record from the serpapi_data table
+    cursor.execute('SELECT * FROM serpapi_data LIMIT 1')
+    row = cursor.fetchone()
+    if row is None:
+        print("No record found in serpapi_data table.")
+        cursor.close()
+        conn.close()
+        return None
+
+    # Get column names
+    col_names = [desc[0] for desc in cursor.description]
+    record = dict(zip(col_names, row))
+
+    # Build the story using the template
+    story_parts = []
+    if record.get("query"):
+        story_parts.append(f"You are given Google Trends search keywords: `{record['query']}`")
+    if record.get("categories"):
+        story_parts.append(f"their corresponding categories: `{record['categories']}`")
+    if record.get("trend_breakdown"):
+        story_parts.append(f"and related details: `{record['trend_breakdown']}`")
+    if story_parts:
+        story = ", ".join(story_parts) + ". Based on this information and real-world context, explain in plain, simple words the background and reasons why these keywords are trending, so that someone with no prior knowledge can easily understand. Do not repeat the information that I provided; instead, generate only the background and reasons directly."
+        cursor.close()
+        conn.close()
+        return story
+    else:
+        print("No relevant fields found in the record.")
+        cursor.close()
+        conn.close()
+        return None
+
+async def ws_send_prompt(prompt, system_prompt):
+    ws_url = "wss://queue.oopus.info"
+    try:
+        async with websockets.connect(ws_url) as websocket:
+            # Send the request
+            request = {
+                "type": "request",
+                "parameters": {
+                    "prompt": prompt,
+                    "system_prompt": system_prompt,
+                    "llm": "gemini",
+                    "search": 1,
+                },
+            }
+            await websocket.send(json.dumps(request))
+            print("Sent to server:", json.dumps(request, ensure_ascii=False))
+
+            # Print all responses from the server
+            async for message in websocket:
+                print("Received:", message)
+    except Exception as e:
+        print("WebSocket error:", str(e))
+
+def main():
+    system_prompt = "You are a helpful assistant."
+    prompt = create_prompt()
+    if prompt:
+        asyncio.run(ws_send_prompt(prompt, system_prompt))
+    else:
+        print("Error occurred while generating prompt.")
+
+if __name__ == "__main__":
+    main()
