@@ -9,7 +9,7 @@ from datetime import datetime
 
 SERP_API_TOKEN_FILE = "serp_token.txt"
 MAX_RETRIES = 4
-NUM_STORIES_TO_CREATE = 5  # Number of stories to create from trending searches
+NUM_STORIES_TO_CREATE = 50  # Number of stories to create from trending searches
 
 with open(SERP_API_TOKEN_FILE, "r") as file:
     api_key = file.read().strip()
