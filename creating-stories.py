@@ -143,7 +143,7 @@ def save_story_to_database(story, serpapi_id):
     
     conn.commit()
     conn.close()
-    print(f"Successfully saved story for serpapi_id: {serpapi_id}")
+    print(f"Successfully saved story for serpapi_id: {serpapi_id}.")
 
 def save_to_database(data, db_name):
     """Save trending searches data to the database"""
@@ -192,10 +192,15 @@ async def create_stories(db_name):
     
     # Get column names
     col_names = [desc[0] for desc in cursor.description]
+
+    counter = 0
     
     for row in rows:
         record = dict(zip(col_names, row))
         serpapi_id = record['id']
+
+        counter += 1
+        print(f"Processing record {counter}/{len(rows)} with serpapi_id: {serpapi_id}")
         
         # Check if story already exists
         cursor.execute('SELECT id FROM news_data WHERE serpapi_id = ?', (serpapi_id,))
