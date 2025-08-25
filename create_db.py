@@ -23,6 +23,17 @@ def create_database():
         )
     ''')
     
+    # Create the news_data table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS news_data (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            news TEXT,
+            date TEXT,
+            serpapi_id INTEGER,
+            CONSTRAINT fk_news_serpapi_id FOREIGN KEY (serpapi_id) REFERENCES serpapi_data (id)
+        )
+    ''')
+    
     # Commit changes and close connection
     conn.commit()
     conn.close()
