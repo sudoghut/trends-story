@@ -6,10 +6,44 @@ import asyncio
 import websockets
 import time
 from datetime import datetime
+import websocket
+import uuid
+import json
+import urllib.request
+import urllib.parse
+import time
 
 SERP_API_TOKEN_FILE = "serp_token.txt"
 MAX_RETRIES = 4
-NUM_STORIES_TO_CREATE = 50  # Number of stories to create from trending searches
+NUM_STORIES_TO_CREATE = 1
+TODAY_YYYYMMDD = time.strftime("%Y%m%d")
+TODAY_HHMMSS = time.strftime("%H%M%S")
+NEWS_TO_KEYWORDS_PROMPT = '''
+### **Refined Prompt Template**
+
+**Objective:** Analyze the following story to generate a comma-separated list of keywords for an AI image generation model (Flux.1). The keywords must represent the abstract emotional summary of the narrative, avoiding all specific, concrete details.
+
+**Instructions:**
+
+1.  **Identify Core Emotions:** Read the story to determine its central emotional themes, underlying mood, and the emotional journey it portrays.
+2.  **Translate to Abstract Concepts:** Convert these emotions into abstract, symbolic, and conceptual keywords. Focus on feelings, atmospheres, and intangible ideas.
+3.  **Generate Keyword List:** Create a single, comma-separated list of these keywords. They should be evocative and suitable for creating a metaphorical and artistic image.
+4. The image should be in the style of a flat illustration with crosshatching.
+
+**Strict Constraints (What to Exclude):**
+
+* **Absolutely NO specific entities:** Do not include names of people, characters, brands, or organizations. Do not include any people, characters, brands, or organizations.
+* **Absolutely NO specific objects or places:** Do not mention any concrete items, locations, cities, or countries.
+* The goal is to capture the *feeling* of the story, not its literal appearance.
+
+**Example of a good output for a story about overcoming grief:**
+`melancholic solitude, emerging hope, quiet resilience, the weight of memory, a fragile dawn, inner turmoil, cathartic release, profound connection, bittersweet reflection.`
+
+**Final Output Format:**
+Provide only the final, comma-separated list of keywords.
+
+**Source Story:**\n
+'''
 
 with open(SERP_API_TOKEN_FILE, "r") as file:
     api_key = file.read().strip()
@@ -42,7 +76,7 @@ def format_trend_breakdown(trend_breakdown):
         return ""
     return "|".join(trend_breakdown)
 
-def create_prompt(serpapi_record):
+def create_prompt_for_story_generation(serpapi_record):
     """Create a prompt for story generation based on serpapi record"""
     story_parts = []
     if serpapi_record.get("query"):
@@ -105,15 +139,14 @@ async def ws_send_prompt(prompt, system_prompt):
     
     return response_content
 
-async def create_story_with_retry(serpapi_record, system_prompt="You are a helpful assistant."):
+async def call_api_with_retry(prompt, system_prompt="You are a helpful assistant."):
     """Create a story with retry logic"""
-    prompt = create_prompt(serpapi_record)
     if not prompt:
         return None
     
     for attempt in range(MAX_RETRIES):
         try:
-            print(f"Attempt {attempt + 1} for query: {serpapi_record.get('query')}")
+            print(f"Attempt {attempt + 1} for query: {prompt}")
             story = await ws_send_prompt(prompt, system_prompt)
             return story
         except Exception as e:
@@ -130,14 +163,14 @@ async def create_story_with_retry(serpapi_record, system_prompt="You are a helpf
     return None
 
 def save_story_to_database(story, serpapi_id):
-    """Save the generated story to news_data table"""
+    """Save the generated story to main_news_data table"""
     conn = sqlite3.connect('trends_data.db')
     cursor = conn.cursor()
     
     current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     cursor.execute('''
-        INSERT INTO news_data (news, date, serpapi_id)
+        INSERT INTO main_news_data (news, date, serpapi_id)
         VALUES (?, ?, ?)
     ''', (story, current_date, serpapi_id))
     
@@ -203,13 +236,17 @@ async def create_stories(db_name):
         print(f"Processing record {counter}/{len(rows)} with serpapi_id: {serpapi_id}")
         
         # Check if story already exists
-        cursor.execute('SELECT id FROM news_data WHERE serpapi_id = ?', (serpapi_id,))
+        cursor.execute('SELECT id FROM main_news_data WHERE serpapi_id = ?', (serpapi_id,))
         if cursor.fetchone():
             print(f"Story already exists for serpapi_id: {serpapi_id}, skipping...")
             continue
-        
+        prompt_for_generating_story = create_prompt_for_story_generation(record)
         # Create story
-        story = await create_story_with_retry(record)
+        story = await call_api_with_retry(prompt_for_generating_story)
+        prompt_for_generating_image_prompts = NEWS_TO_KEYWORDS_PROMPT + story
+        # Create image prompts
+        image_prompts = await call_api_with_retry(prompt_for_generating_image_prompts)
+        # Create image
         if story:
             save_story_to_database(story, serpapi_id)
         else:

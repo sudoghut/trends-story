@@ -1,11 +1,12 @@
 import sqlite3
 
-def create_database():
+def create_database(db_name):
+
     # Connect to SQLite database (creates file if it doesn't exist)
-    conn = sqlite3.connect('trends_data.db')
+    conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
     
-    # Create the data table
+    # Create the serpapi_data table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS serpapi_data (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,14 +24,24 @@ def create_database():
         )
     ''')
     
-    # Create the news_data table
+    # Create the main_news_data table
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS news_data (
+        CREATE TABLE IF NOT EXISTS main_news_data (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             news TEXT,
             date TEXT,
             serpapi_id INTEGER,
-            CONSTRAINT fk_news_serpapi_id FOREIGN KEY (serpapi_id) REFERENCES serpapi_data (id)
+            image_id INTEGER,
+            CONSTRAINT fk_news_serpapi_id FOREIGN KEY (serpapi_id) REFERENCES serpapi_data (id) ON DELETE CASCADE,
+            CONSTRAINT fk_news_image_id FOREIGN KEY (image_id) REFERENCES image_data (id) ON DELETE CASCADE
+        )
+    ''')
+
+    # Create the image_data table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS image_data (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_name TEXT
         )
     ''')
     
@@ -40,4 +51,4 @@ def create_database():
     print("Database and table created successfully!")
 
 if __name__ == "__main__":
-    create_database()
+    create_database("trends_data.db")

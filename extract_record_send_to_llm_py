@@ -4,7 +4,7 @@ import websockets
 import json
 
 def create_prompt():
-    # Connect to the SQLite database (assumes trends_data.db is in the same directory)
+    # Connect to the SQLite database
     conn = sqlite3.connect('trends_data.db')
     cursor = conn.cursor()
 
@@ -63,13 +63,11 @@ async def ws_send_prompt(prompt, system_prompt):
     except Exception as e:
         print("WebSocket error:", str(e))
 
-def main():
-    system_prompt = "You are a helpful assistant."
-    prompt = create_prompt()
-    if prompt:
-        asyncio.run(ws_send_prompt(prompt, system_prompt))
-    else:
-        print("Error occurred while generating prompt.")
 
-if __name__ == "__main__":
-    main()
+system_prompt = "You are a helpful assistant."
+prompt = create_prompt()
+if prompt:
+    asyncio.run(ws_send_prompt(prompt, system_prompt))
+else:
+    print("Error occurred while generating prompt.")
+
