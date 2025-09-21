@@ -18,7 +18,7 @@ import time
 SERP_API_TOKEN_FILE = "serp_token.txt"
 SERVER_ADDRESS = "127.0.0.1:8188"
 MAX_RETRIES = 4
-NUM_STORIES_TO_CREATE = 2
+NUM_STORIES_TO_CREATE = 50
 TODAY_YYYYMMDD = time.strftime("%Y%m%d")
 TODAY_HHMMSS = time.strftime("%H%M%S")
 IMAGE_DIR = f"images/{TODAY_YYYYMMDD}"
@@ -349,26 +349,29 @@ def save_to_database(data, db_name):
 
 async def create_stories(db_name):
     """Create stories for trending searches"""
-    
+    start_time = time.time()
+    print(f"Program started at: {datetime.now().strftime('%Y%m%d %H:%M:%S')}")
+
     # Get the specified number of records from the database
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
 
     cursor.execute('SELECT * FROM serpapi_data ORDER BY id ASC LIMIT ?', (NUM_STORIES_TO_CREATE,))
     rows = cursor.fetchall()
-    
+
     # Get column names
     col_names = [desc[0] for desc in cursor.description]
 
     counter = 0
-    
+
     for row in rows:
         record = dict(zip(col_names, row))
         serpapi_id = record['id']
 
         counter += 1
         print(f"Processing record {counter}/{len(rows)} with serpapi_id: {serpapi_id}")
-        
+        print(f"Current time: {datetime.now().strftime('%Y%m%d %H:%M:%S')}")
+
         # Check if story already exists
         cursor.execute('SELECT id FROM main_news_data WHERE serpapi_id = ?', (serpapi_id,))
         if cursor.fetchone():
@@ -380,7 +383,7 @@ async def create_stories(db_name):
         prompt_for_generating_image_prompts = NEWS_TO_KEYWORDS_PROMPT + story
         # Create image prompts
         image_prompts = await call_api_with_retry(prompt_for_generating_image_prompts)
-        
+
         # Create image
         image_id = None
         if image_prompts:
@@ -392,19 +395,28 @@ async def create_stories(db_name):
                     print(f"Failed to create image for serpapi_id: {serpapi_id}")
             except Exception as e:
                 print(f"Error creating image for serpapi_id: {serpapi_id}: {e}")
-        
+
         if story:
             save_story_to_database(story, serpapi_id, image_id)
         else:
             print(f"Failed to create story for serpapi_id: {serpapi_id}")
-    
+
     conn.close()
+    end_time = time.time()
+    print(f"Program ended at: {datetime.now().strftime('%Y%m%d %H:%M:%S')}")
+    elapsed = end_time - start_time
+    hours = int(elapsed // 3600)
+    minutes = int((elapsed % 3600) // 60)
+    seconds = int(elapsed % 60)
+    print(f"Total elapsed time: {hours} hours {minutes} minutes {seconds} seconds")
 
 
-# res = get_trending_searches()
-# res_json = json.dumps(res, indent=2)
-# with open("trending_searches.json", "w") as file:
-#     file.write(res_json)
+
+print(f"Starting program at: {datetime.now().strftime('%Y%m%d %H:%M:%S')}")
+res = get_trending_searches()
+res_json = json.dumps(res, indent=2)
+with open("trending_searches.json", "w") as file:
+    file.write(res_json)
 data = load_trending_searches("trending_searches.json")
 trends_data_db_name = 'trends_data.db'
 save_to_database(data, trends_data_db_name)
