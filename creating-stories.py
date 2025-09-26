@@ -23,30 +23,11 @@ TODAY_YYYYMMDD = time.strftime("%Y%m%d")
 TODAY_HHMMSS = time.strftime("%H%M%S")
 IMAGE_DIR = f"images/{TODAY_YYYYMMDD}"
 NEWS_TO_KEYWORDS_PROMPT = '''
-### **Refined Prompt Template**
-
-**Objective:** Analyze the following story to generate a comma-separated list of keywords for an AI image generation model (Flux.1). The keywords must represent the abstract emotional summary of the narrative, avoiding all specific, concrete details.
-
-**Instructions:**
-
-1.  **Identify Core Emotions:** Read the story to determine its central emotional themes, underlying mood, and the emotional journey it portrays.
-2.  **Translate to Abstract Concepts:** Convert these emotions into abstract, symbolic, and conceptual keywords. Focus on feelings, atmospheres, and intangible ideas.
-3.  **Generate Keyword List:** Create a single, comma-separated list of these keywords. They should be evocative and suitable for creating a metaphorical and artistic image.
-4. The image should be in the style of a flat illustration with crosshatching.
-
-**Strict Constraints (What to Exclude):**
-
-* **Absolutely NO specific entities:** Do not include names of people, characters, brands, or organizations. Do not include any people, characters, brands, or organizations.
-* **Absolutely NO specific objects or places:** Do not mention any concrete items, locations, cities, or countries.
-* The goal is to capture the *feeling* of the story, not its literal appearance.
-
-**Example of a good output for a story about overcoming grief:**
-`melancholic solitude, emerging hope, quiet resilience, the weight of memory, a fragile dawn, inner turmoil, cathartic release, profound connection, bittersweet reflection.`
-
-**Final Output Format:**
-Provide only the final, comma-separated list of keywords.
-
-**Source Story:**\n
+**Task:** Create `keywords` for an AI image generation model (Flux.1). 
+**Goal:** The keywords describe a detailed scene or visual narrative. These keywords should not depict specific objects, people, or events from the source text. Instead, they must evoke the overall mood, atmosphere, and abstract concepts of the story as if they were painting a picture of an emotional or psychological landscape. Focus on sensory details—like light, shadow, texture, and color—that represent the abstract themes. The final output should read as a cohesive, descriptive sequence, not a simple list. 
+**Style:** The final image should be in a `flat illustration style`. 
+**Format:** Do not include any additional text, explanations, or multiple sets of prompts. 
+**News Story:** \n
 '''
 
 with open(SERP_API_TOKEN_FILE, "r") as file:
@@ -147,7 +128,8 @@ def create_image(image_prompts, serpapi_record):
         return None
     
     # Modify the prompt in node "6"
-    prompt_workflow["6"]["inputs"]["text"] = f"(Style: flat illustration, crosshatching), {image_prompts}"
+    prompt_workflow["6"]["inputs"]["text"] = f"{image_prompts}"
+    # prompt_workflow["6"]["inputs"]["text"] = f"(Style: flat illustration, crosshatching), {image_prompts}"
     
     # Modify the seed in node "31" (KSampler) - use random seed for variation
     prompt_workflow["31"]["inputs"]["seed"] = random.randint(0, 999999999999999)
