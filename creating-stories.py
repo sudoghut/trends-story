@@ -18,7 +18,7 @@ import time
 SERP_API_TOKEN_FILE = "serp_token.txt"
 SERVER_ADDRESS = "127.0.0.1:8188"
 MAX_RETRIES = 4
-NUM_STORIES_TO_CREATE = 50
+NUM_STORIES_TO_CREATE = 10
 TODAY_YYYYMMDD = time.strftime("%Y%m%d")
 TODAY_HHMMSS = time.strftime("%H%M%S")
 IMAGE_DIR = f"images/{TODAY_YYYYMMDD}"
@@ -338,7 +338,17 @@ async def create_stories(db_name):
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
 
-    cursor.execute('SELECT * FROM serpapi_data ORDER BY id ASC LIMIT ?', (NUM_STORIES_TO_CREATE,))
+    # First get the last one record of the date(TEXT) from serpapi_data(Ex: 2025-10-03 15:29:02). Using this as a filter to get the same date records.
+    cursor.execute('SELECT date FROM serpapi_data ORDER BY id DESC LIMIT 1')
+    last_date = cursor.fetchone()
+    if last_date:
+        last_date = last_date[0]
+        print(f"Last date found: {last_date}")
+    else:
+        print("No date found, proceeding without date filter.")
+        last_date = None
+
+    cursor.execute('SELECT * FROM serpapi_data WHERE date = ? ORDER BY id ASC LIMIT ?', (last_date, NUM_STORIES_TO_CREATE))
     rows = cursor.fetchall()
 
     # Get column names
@@ -363,6 +373,8 @@ async def create_stories(db_name):
         # Create story
         story = await call_api_with_retry(prompt_for_generating_story)
         prompt_for_generating_image_prompts = NEWS_TO_KEYWORDS_PROMPT + story
+        # Pause for 5s
+        await asyncio.sleep(5)
         # Create image prompts
         image_prompts = await call_api_with_retry(prompt_for_generating_image_prompts)
 
@@ -395,10 +407,10 @@ async def create_stories(db_name):
 
 
 print(f"Starting program at: {datetime.now().strftime('%Y%m%d %H:%M:%S')}")
-res = get_trending_searches()
-res_json = json.dumps(res, indent=2)
-with open("trending_searches.json", "w") as file:
-    file.write(res_json)
+# res = get_trending_searches()
+# res_json = json.dumps(res, indent=2)
+# with open("trending_searches.json", "w") as file:
+#     file.write(res_json)
 data = load_trending_searches("trending_searches.json")
 trends_data_db_name = 'trends_data.db'
 save_to_database(data, trends_data_db_name)
