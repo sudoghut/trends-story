@@ -1,9 +1,9 @@
 {
   "6": {
     "inputs": {
-      "text": "(Style: flat illustration，crosshatching), abstract emotional art, grief metaphor, deep chasm, abyss, swirling emotional vortex, somber color palette, muted blues, deep purples, slate grey, melancholic atmosphere, subtle glow, soft gradients, textured paper effect, emotional landscape, internal struggle, monsters of the mind, unseen presence, contemplative mood, poignant, ethereal, delicate balance, supportive connection, two converging light sources, intricate linework, subtle details.",
+      "text": "WordArt word:where to watch chivas de guadalajara vs tigres uanl\nVibrant showgirl marquee lighting, Electric Pop Art style, Art Deco elegance, glittering gold and magenta color palette, bold theatrical font, shimmering sequin texture, spotlight effect, chrome and neon accents, infectious energy, confetti explosion, cinematic wide-screen aspect, high-gloss finish, dramatic stage atmosphere, feathered plumes, diamond sparkle, dynamic movement, hyper-realistic rendering, inspired by vintage Las Vegas.",
       "clip": [
-        "38",
+        "30",
         1
       ]
     },
@@ -30,7 +30,7 @@
   },
   "9": {
     "inputs": {
-      "filename_prefix": "ComfyUI",
+      "filename_prefix": "example",
       "images": [
         "8",
         0
@@ -63,14 +63,14 @@
   },
   "31": {
     "inputs": {
-      "seed": 743574297730631,
+      "seed": 803921594750285,
       "steps": 20,
       "cfg": 1,
       "sampler_name": "euler",
       "scheduler": "simple",
       "denoise": 1,
       "model": [
-        "38",
+        "30",
         0
       ],
       "positive": [
@@ -104,30 +104,11 @@
       "title": "FluxGuidance"
     }
   },
-  "38": {
-    "inputs": {
-      "lora_name": "franklin_booth_style_flux_v1-000014.safetensors",
-      "strength_model": 1,
-      "strength_clip": 1,
-      "model": [
-        "30",
-        0
-      ],
-      "clip": [
-        "30",
-        1
-      ]
-    },
-    "class_type": "LoraLoader",
-    "_meta": {
-      "title": "Load LoRA"
-    }
-  },
   "39:33": {
     "inputs": {
       "text": "",
       "clip": [
-        "38",
+        "30",
         1
       ]
     },

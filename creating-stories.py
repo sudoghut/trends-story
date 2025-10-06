@@ -23,12 +23,19 @@ TODAY_YYYYMMDD = time.strftime("%Y%m%d")
 TODAY_HHMMSS = time.strftime("%H%M%S")
 IMAGE_DIR = f"images/{TODAY_YYYYMMDD}"
 NEWS_TO_KEYWORDS_PROMPT = '''
-**Task:** Create `keywords` for an AI image generation model (Flux.1). 
-**Goal:** The keywords describe a detailed scene or visual narrative. These keywords should not depict specific objects, people, or events from the source text. Instead, they must evoke the overall mood, atmosphere, and abstract concepts of the story as if they were painting a picture of an emotional or psychological landscape. Focus on sensory details—like light, shadow, texture, and color—that represent the abstract themes. The final output should read as a cohesive, descriptive sequence, not a simple list. 
-**Style:** The final image should be in a `flat illustration style`. 
-**Format:** Do not include any additional text, explanations, or multiple sets of prompts. 
-**News Story:** \n
+**Task:** Generate a set of `keywords` for an AI image generation model (**Flux.1**) to create **WordArt**.
+**Goal:** Design artistic text for the phrase **“{keywords}”**, visually expressing the **themes, emotions, and atmosphere** of the given story.
+**Guidelines:**
+* Focus on **aesthetic composition** and **emotional resonance** aligned with the story’s mood.
+* Include references to **art styles, materials, textures, color palettes, or lighting** to enrich the visual concept.
+* Avoid any **prompt-engineering syntax** (e.g., weights, parameters, “–v”, “–ar”, etc.).
+* Output only a **clean, descriptive list of keywords** appropriate for Flux.1.
+* Begin the list with: `WordArt word:{keyword}`
+**Story:**\n
 '''
+
+def create_news_to_keywords_prompt(keywords):
+    return NEWS_TO_KEYWORDS_PROMPT.replace("{keywords}", keywords)
 
 with open(SERP_API_TOKEN_FILE, "r") as file:
     api_key = file.read().strip()
@@ -359,6 +366,7 @@ async def create_stories(db_name):
     for row in rows:
         record = dict(zip(col_names, row))
         serpapi_id = record['id']
+        query = record['query']
 
         counter += 1
         print(f"Processing record {counter}/{len(rows)} with serpapi_id: {serpapi_id}")
@@ -372,12 +380,12 @@ async def create_stories(db_name):
         prompt_for_generating_story = create_prompt_for_story_generation(record)
         # Create story
         story = await call_api_with_retry(prompt_for_generating_story)
-        prompt_for_generating_image_prompts = NEWS_TO_KEYWORDS_PROMPT + story
+        prompt_for_generating_image_prompts = create_news_to_keywords_prompt(query) + story
         # Pause for 5s
         await asyncio.sleep(5)
         # Create image prompts
         image_prompts = await call_api_with_retry(prompt_for_generating_image_prompts)
-
+        
         # Create image
         image_id = None
         if image_prompts:
@@ -407,10 +415,10 @@ async def create_stories(db_name):
 
 
 print(f"Starting program at: {datetime.now().strftime('%Y%m%d %H:%M:%S')}")
-# res = get_trending_searches()
-# res_json = json.dumps(res, indent=2)
-# with open("trending_searches.json", "w") as file:
-#     file.write(res_json)
+res = get_trending_searches()
+res_json = json.dumps(res, indent=2)
+with open("trending_searches.json", "w") as file:
+    file.write(res_json)
 data = load_trending_searches("trending_searches.json")
 trends_data_db_name = 'trends_data.db'
 save_to_database(data, trends_data_db_name)
