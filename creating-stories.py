@@ -18,7 +18,7 @@ import time
 SERP_API_TOKEN_FILE = "serp_token.txt"
 SERVER_ADDRESS = "127.0.0.1:8188"
 MAX_RETRIES = 4
-NUM_STORIES_TO_CREATE = 10
+NUM_STORIES_TO_CREATE = 20
 TODAY_YYYYMMDD = time.strftime("%Y%m%d")
 TODAY_HHMMSS = time.strftime("%H%M%S")
 IMAGE_DIR = f"images/{TODAY_YYYYMMDD}"
