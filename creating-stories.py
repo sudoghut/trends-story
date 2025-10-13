@@ -24,13 +24,14 @@ TODAY_HHMMSS = time.strftime("%H%M%S")
 IMAGE_DIR = f"images/{TODAY_YYYYMMDD}"
 NEWS_TO_KEYWORDS_PROMPT = '''
 **Task:** Generate a set of `keywords` for an AI image generation model (**Flux.1**) to create **WordArt**.
-**Goal:** Design artistic text for the phrase **“{keywords}”**, visually expressing the **themes, emotions, and atmosphere** of the given story.
+**Goal:** Design artistic text for the phrase **"{keywords}"**, visually expressing the **themes, emotions, and atmosphere** of the given story.
 **Guidelines:**
 * Focus on **aesthetic composition** and **emotional resonance** aligned with the story’s mood.
 * Include references to **art styles, materials, textures, color palettes, or lighting** to enrich the visual concept.
+* Do not include any explanations, introductions, or sentences — output only the keyword list.
 * Avoid any **prompt-engineering syntax** (e.g., weights, parameters, “–v”, “–ar”, etc.).
 * Output only a **clean, descriptive list of keywords** appropriate for Flux.1.
-* Begin the list with: `WordArt word:{keyword}`
+* Begin the list with: `WordArt word:"{keyword}"`
 **Story:**\n
 '''
 
@@ -397,6 +398,9 @@ async def create_stories(db_name):
                     print(f"Failed to create image for serpapi_id: {serpapi_id}")
             except Exception as e:
                 print(f"Error creating image for serpapi_id: {serpapi_id}: {e}")
+                raise Exception(f"Image creation failed for serpapi_id: {serpapi_id}. Reason: {str(e)}")
+        else:
+            raise Exception(f"No image prompts generated for serpapi_id: {serpapi_id}")
 
         if story:
             save_story_to_database(story, serpapi_id, image_id)
