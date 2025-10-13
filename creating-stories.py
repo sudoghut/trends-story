@@ -22,7 +22,7 @@ NUM_STORIES_TO_CREATE = 10
 TODAY_YYYYMMDD = time.strftime("%Y%m%d")
 TODAY_HHMMSS = time.strftime("%H%M%S")
 IMAGE_DIR = f"images/{TODAY_YYYYMMDD}"
-NEWS_TO_KEYWORDS_PROMPT = '''
+news_to_keywords_prompt = '''
 **Task:** Generate a set of `keywords` for an AI image generation model (**Flux.1**) to create **WordArt**.
 **Goal:** Design artistic text for the phrase **"{keywords}"**, visually expressing the **themes, emotions, and atmosphere** of the given story.
 **Guidelines:**
@@ -31,12 +31,12 @@ NEWS_TO_KEYWORDS_PROMPT = '''
 * Do not include any explanations, introductions, or sentences — output only the keyword list.
 * Avoid any **prompt-engineering syntax** (e.g., weights, parameters, “–v”, “–ar”, etc.).
 * Output only a **clean, descriptive list of keywords** appropriate for Flux.1.
-* Begin the list with: `WordArt word:"{keyword}"`
+* Begin the list with: WordArt word:"{keywords}",
 **Story:**\n
 '''
 
 def create_news_to_keywords_prompt(keywords):
-    return NEWS_TO_KEYWORDS_PROMPT.replace("{keywords}", keywords)
+    return news_to_keywords_prompt.replace("{keywords}", keywords)
 
 with open(SERP_API_TOKEN_FILE, "r") as file:
     api_key = file.read().strip()
