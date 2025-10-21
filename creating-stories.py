@@ -8,6 +8,7 @@ import os
 import re
 import random
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import websocket
 import uuid
 import json
@@ -15,12 +16,17 @@ import urllib.request
 import urllib.parse
 import time
 
+# New York timezone
+NY_TZ = ZoneInfo("America/New_York")
+
 SERP_API_TOKEN_FILE = "serp_token.txt"
 SERVER_ADDRESS = "127.0.0.1:8188"
 MAX_RETRIES = 4
 NUM_STORIES_TO_CREATE = 20
-TODAY_YYYYMMDD = time.strftime("%Y%m%d")
-TODAY_HHMMSS = time.strftime("%H%M%S")
+# Get current time in New York timezone
+now_ny = datetime.now(NY_TZ)
+TODAY_YYYYMMDD = now_ny.strftime("%Y%m%d")
+TODAY_HHMMSS = now_ny.strftime("%H%M%S")
 IMAGE_DIR = f"images/{TODAY_YYYYMMDD}"
 news_to_keywords_prompt = '''
 **Task:** Generate a set of `keywords` for an AI image generation model (**Flux.1**) to create **WordArt**.
@@ -291,7 +297,7 @@ def save_story_to_database(story, serpapi_id, image_id=None):
     conn = sqlite3.connect('trends_data.db')
     cursor = conn.cursor()
     
-    current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    current_date = datetime.now(NY_TZ).strftime('%Y-%m-%d %H:%M:%S')
     
     cursor.execute('''
         INSERT INTO main_news_data (news, date, serpapi_id, image_id)
@@ -307,7 +313,7 @@ def save_to_database(data, db_name):
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
     
-    current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    current_date = datetime.now(NY_TZ).strftime('%Y-%m-%d %H:%M:%S')
     
     for trend in data.get('trending_searches', []):
         categories_str = format_categories(trend.get('categories', []))
