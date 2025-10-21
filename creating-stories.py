@@ -25,9 +25,12 @@ MAX_RETRIES = 4
 NUM_STORIES_TO_CREATE = 20
 # Get current time in New York timezone
 now_ny = datetime.now(NY_TZ)
+TODAY_YYYY = now_ny.strftime("%Y")
+TODAY_MM = now_ny.strftime("%-m") if os.name != 'nt' else now_ny.strftime("%m").lstrip("0") or "0"
+TODAY_DD = now_ny.strftime("%-d") if os.name != 'nt' else now_ny.strftime("%d").lstrip("0") or "0"
 TODAY_YYYYMMDD = now_ny.strftime("%Y%m%d")
 TODAY_HHMMSS = now_ny.strftime("%H%M%S")
-IMAGE_DIR = f"images/{TODAY_YYYYMMDD}"
+IMAGE_DIR = f"images/{TODAY_YYYY}/{TODAY_MM}/{TODAY_DD}"
 news_to_keywords_prompt = '''
 **Task:** Generate a set of `keywords` for an AI image generation model (**Flux.1**) to create **WordArt**.
 **Goal:** Design artistic text for the phrase **"{keywords}"**, visually expressing the **themes, emotions, and atmosphere** of the given story.
