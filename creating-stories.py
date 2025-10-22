@@ -15,6 +15,7 @@ import json
 import urllib.request
 import urllib.parse
 import time
+import xml.etree.ElementTree as ET
 
 # New York timezone
 NY_TZ = ZoneInfo("America/New_York")
@@ -427,6 +428,148 @@ async def create_stories(db_name):
 
 
 
+def generate_sitemap(db_name):
+    """Generate sitemap.xml with homepage and all historical date pages.
+    Intelligently merges with existing sitemap if it exists."""
+    sitemap_path = 'sitemap.xml'
+    namespace = 'http://www.sitemaps.org/schemas/sitemap/0.9'
+    
+    # Get dates from database
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    cursor.execute('SELECT DISTINCT date FROM main_news_data ORDER BY date DESC')
+    dates = cursor.fetchall()
+    conn.close()
+    
+    # Parse dates from database into a dictionary {date_yyyymmdd: lastmod_date}
+    db_urls = {}
+    for date_row in dates:
+        date_str = date_row[0]  # Format: 'YYYY-MM-DD HH:MM:SS'
+        try:
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+            date_yyyymmdd = date_obj.strftime('%Y%m%d')
+            lastmod_date = date_obj.strftime('%Y-%m-%d')
+            url = f'https://trending.oopus.info/date/{date_yyyymmdd}'
+            db_urls[url] = lastmod_date
+        except ValueError as e:
+            print(f"Warning: Could not parse date '{date_str}': {e}")
+            continue
+    
+    # Check if sitemap already exists
+    existing_urls = {}
+    if os.path.exists(sitemap_path):
+        print(f"Existing sitemap found at {sitemap_path}, parsing and merging...")
+        try:
+            tree = ET.parse(sitemap_path)
+            root = tree.getroot()
+            
+            # Parse existing URLs with namespace handling
+            for url_elem in root.findall(f'{{{namespace}}}url'):
+                loc_elem = url_elem.find(f'{{{namespace}}}loc')
+                lastmod_elem = url_elem.find(f'{{{namespace}}}lastmod')
+                
+                if loc_elem is not None and loc_elem.text:
+                    loc = loc_elem.text.strip()
+                    lastmod = lastmod_elem.text.strip() if lastmod_elem is not None else None
+                    
+                    # Skip homepage - will be regenerated with current timestamp
+                    if loc != 'https://trending.oopus.info/':
+                        existing_urls[loc] = lastmod
+            
+            print(f"Parsed {len(existing_urls)} existing URLs from sitemap")
+        except ET.ParseError as e:
+            print(f"Warning: Could not parse existing sitemap: {e}. Creating new sitemap.")
+            existing_urls = {}
+        except Exception as e:
+            print(f"Warning: Error reading existing sitemap: {e}. Creating new sitemap.")
+            existing_urls = {}
+    
+    # Merge URLs: use more recent lastmod date for duplicates
+    merged_urls = existing_urls.copy()
+    new_count = 0
+    updated_count = 0
+    
+    for url, db_lastmod in db_urls.items():
+        if url in merged_urls:
+            # Compare dates and use the more recent one
+            existing_lastmod = merged_urls[url]
+            if existing_lastmod and db_lastmod:
+                try:
+                    existing_date = datetime.strptime(existing_lastmod, '%Y-%m-%d')
+                    db_date = datetime.strptime(db_lastmod, '%Y-%m-%d')
+                    if db_date > existing_date:
+                        merged_urls[url] = db_lastmod
+                        updated_count += 1
+                except ValueError:
+                    # If date parsing fails, use database date
+                    merged_urls[url] = db_lastmod
+                    updated_count += 1
+            else:
+                # If one is missing, use the database date
+                merged_urls[url] = db_lastmod
+                updated_count += 1
+        else:
+            merged_urls[url] = db_lastmod
+            new_count += 1
+    
+    # Build the sitemap XML
+    sitemap_lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+    ]
+    
+    # Add homepage first with current timestamp
+    current_date = datetime.now(NY_TZ).strftime("%Y-%m-%d")
+    sitemap_lines.extend([
+        '  <url>',
+        '    <loc>https://trending.oopus.info/</loc>',
+        f'    <lastmod>{current_date}</lastmod>',
+        '  </url>'
+    ])
+    
+    # Sort URLs (excluding homepage) - extract date and sort chronologically
+    sorted_urls = []
+    for url, lastmod in merged_urls.items():
+        # Extract date from URL for sorting (format: /date/YYYYMMDD)
+        try:
+            date_match = re.search(r'/date/(\d{8})$', url)
+            if date_match:
+                date_key = date_match.group(1)
+                sorted_urls.append((date_key, url, lastmod))
+            else:
+                # For URLs without date pattern, put them at the end
+                sorted_urls.append(('99999999', url, lastmod))
+        except:
+            sorted_urls.append(('99999999', url, lastmod))
+    
+    # Sort by date (chronological order)
+    sorted_urls.sort(key=lambda x: x[0])
+    
+    # Add sorted URL entries
+    for _, url, lastmod in sorted_urls:
+        sitemap_lines.extend([
+            '  <url>',
+            f'    <loc>{url}</loc>',
+            f'    <lastmod>{lastmod if lastmod else current_date}</lastmod>',
+            '  </url>'
+        ])
+    
+    # Close the urlset
+    sitemap_lines.append('</urlset>')
+    
+    # Write sitemap to file
+    with open(sitemap_path, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(sitemap_lines))
+    
+    print(f"Successfully generated sitemap at: {sitemap_path}")
+    print(f"  Total URLs: {len(merged_urls) + 1} (including homepage)")
+    print(f"  New entries: {new_count}")
+    print(f"  Updated entries: {updated_count}")
+    print(f"  Preserved entries: {len(existing_urls) - updated_count}")
+    
+    return sitemap_path
+
+
 print(f"Starting program at: {datetime.now().strftime('%Y%m%d %H:%M:%S')}")
 res = get_trending_searches()
 res_json = json.dumps(res, indent=2)
@@ -436,3 +579,6 @@ data = load_trending_searches("trending_searches.json")
 trends_data_db_name = 'trends_data.db'
 save_to_database(data, trends_data_db_name)
 asyncio.run(create_stories(trends_data_db_name))
+
+# Generate sitemap after all operations complete
+generate_sitemap(trends_data_db_name)
