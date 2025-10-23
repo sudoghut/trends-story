@@ -8,7 +8,3 @@
 
 - [trend-story-interface](https://github.com/sudoghut/trend-story-interface)
 - [trend-story-api](https://github.com/sudoghut/trend-story-api)
-
-## Getting Started
-
-Refer to the related repositories for usage and integration details.
