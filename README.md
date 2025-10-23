@@ -1,5 +1,7 @@
 # trends-story
 
+Project URL: https://trending.oopus.info
+
 ## Project Overview
 
 `trends-story` is a system for generating and managing trending story content. It aggregates, analyzes, and presents trending topics, enabling users to explore and interact with timely stories across various domains.
