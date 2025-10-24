@@ -249,7 +249,7 @@ async def ws_send_prompt(prompt, system_prompt):
 
             # Collect all responses from the server
             async for message in websocket:
-                print("Received:", message)
+                # print("Received:", message)
                 try:
                     parsed_message = json.loads(message)
                     if parsed_message.get("type") == "result":
@@ -280,7 +280,7 @@ async def call_api_with_retry(prompt, system_prompt="You are a helpful assistant
     
     for attempt in range(MAX_RETRIES):
         try:
-            print(f"Attempt {attempt + 1} for query: {prompt}")
+            # print(f"Attempt {attempt + 1} for query: {prompt}")
             story = await ws_send_prompt(prompt, system_prompt)
             return story
         except Exception as e:
@@ -366,7 +366,19 @@ async def create_stories(db_name):
         print("No date found, proceeding without date filter.")
         last_date = None
 
-    cursor.execute('SELECT * FROM serpapi_data WHERE date = ? ORDER BY id ASC LIMIT ?', (last_date, NUM_STORIES_TO_CREATE))
+    # Now get records from serpapi_data with the last date, excluding categories '17-Sports' and removing duplicates based on 'query'
+    cursor.execute('''
+        SELECT * FROM serpapi_data 
+        WHERE date = ? 
+        AND categories != '17-Sports'
+        AND id IN (
+            SELECT MIN(id) FROM serpapi_data 
+            WHERE date = ? AND categories != '17-Sports'
+            GROUP BY query
+        )
+        ORDER BY id ASC 
+        LIMIT ?
+    ''', (last_date, last_date, NUM_STORIES_TO_CREATE))
     rows = cursor.fetchall()
 
     # Get column names
@@ -571,10 +583,10 @@ def generate_sitemap(db_name):
 
 
 print(f"Starting program at: {datetime.now().strftime('%Y%m%d %H:%M:%S')}")
-res = get_trending_searches()
-res_json = json.dumps(res, indent=2)
-with open("trending_searches.json", "w") as file:
-    file.write(res_json)
+# res = get_trending_searches()
+# res_json = json.dumps(res, indent=2)
+# with open("trending_searches.json", "w") as file:
+#     file.write(res_json)
 data = load_trending_searches("trending_searches.json")
 trends_data_db_name = 'trends_data.db'
 save_to_database(data, trends_data_db_name)
