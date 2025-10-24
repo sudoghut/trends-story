@@ -224,7 +224,7 @@ def save_image_to_database(filename):
     conn.commit()
     conn.close()
     
-    print(f"Successfully saved image record with id: {image_id}")
+    # print(f"Successfully saved image record with id: {image_id}")
     return image_id
 
 async def ws_send_prompt(prompt, system_prompt):
@@ -310,7 +310,7 @@ def save_story_to_database(story, serpapi_id, image_id=None):
     
     conn.commit()
     conn.close()
-    print(f"Successfully saved story for serpapi_id: {serpapi_id} with image_id: {image_id}.")
+    # print(f"Successfully saved story for serpapi_id: {serpapi_id} with image_id: {image_id}.")
 
 def save_to_database(data, db_name):
     """Save trending searches data to the database"""
@@ -392,7 +392,7 @@ async def create_stories(db_name):
         query = record['query']
 
         counter += 1
-        print(f"Processing record {counter}/{len(rows)} with serpapi_id: {serpapi_id}")
+        print(f"\nProcessing record {counter}/{len(rows)} with serpapi_id: {serpapi_id}")
         print(f"Current time: {datetime.now().strftime('%Y%m%d %H:%M:%S')}")
 
         # Check if story already exists
@@ -587,9 +587,9 @@ print(f"Starting program at: {datetime.now().strftime('%Y%m%d %H:%M:%S')}")
 # res_json = json.dumps(res, indent=2)
 # with open("trending_searches.json", "w") as file:
 #     file.write(res_json)
-data = load_trending_searches("trending_searches.json")
+# data = load_trending_searches("trending_searches.json")
 trends_data_db_name = 'trends_data.db'
-save_to_database(data, trends_data_db_name)
+# save_to_database(data, trends_data_db_name)
 asyncio.run(create_stories(trends_data_db_name))
 
 # Generate sitemap after all operations complete
