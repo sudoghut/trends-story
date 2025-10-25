@@ -583,13 +583,13 @@ def generate_sitemap(db_name):
 
 
 print(f"Starting program at: {datetime.now().strftime('%Y%m%d %H:%M:%S')}")
-# res = get_trending_searches()
-# res_json = json.dumps(res, indent=2)
-# with open("trending_searches.json", "w") as file:
-#     file.write(res_json)
-# data = load_trending_searches("trending_searches.json")
+res = get_trending_searches()
+res_json = json.dumps(res, indent=2)
+with open("trending_searches.json", "w") as file:
+    file.write(res_json)
+data = load_trending_searches("trending_searches.json")
 trends_data_db_name = 'trends_data.db'
-# save_to_database(data, trends_data_db_name)
+save_to_database(data, trends_data_db_name)
 asyncio.run(create_stories(trends_data_db_name))
 
 # Generate sitemap after all operations complete
