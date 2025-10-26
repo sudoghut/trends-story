@@ -368,16 +368,30 @@ async def create_stories(db_name):
 
     # Now get records from serpapi_data with the last date, excluding categories '17-Sports' and removing duplicates based on 'query'
     cursor.execute('''
-        SELECT * FROM serpapi_data 
-        WHERE date = ? 
-        AND categories != '17-Sports'
-        AND id IN (
+    SELECT * FROM serpapi_data AS sd
+    WHERE 
+        -- Condition 1: Process only the latest batch of data
+        sd.date = ? 
+
+        -- Condition 2: Exclude news where the category is exclusively '17-Sports'
+        AND sd.categories != '17-Sports'
+        
+        -- Condition 3: Deduplicate queries within the current batch
+        AND sd.id IN (
             SELECT MIN(id) FROM serpapi_data 
             WHERE date = ? AND categories != '17-Sports'
             GROUP BY query
         )
-        ORDER BY id ASC 
-        LIMIT ?
+        
+        -- Condition 4: Exclude queries that have already been processed today
+        AND NOT EXISTS (
+            SELECT 1 
+            FROM main_news_data AS mnd
+            JOIN serpapi_data AS sd_join ON mnd.serpapi_id = sd_join.id
+            WHERE sd_join.query = sd.query AND DATE(mnd.date) = ?
+        )
+    ORDER BY sd.id ASC 
+    LIMIT ?
     ''', (last_date, last_date, NUM_STORIES_TO_CREATE))
     rows = cursor.fetchall()
 
