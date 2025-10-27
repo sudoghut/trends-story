@@ -392,7 +392,7 @@ async def create_stories(db_name):
         )
     ORDER BY sd.id ASC 
     LIMIT ?
-    ''', (last_date, last_date, NUM_STORIES_TO_CREATE))
+    ''', (last_date, last_date, last_date, NUM_STORIES_TO_CREATE))
     rows = cursor.fetchall()
 
     # Get column names
