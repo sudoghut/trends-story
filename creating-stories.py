@@ -359,12 +359,16 @@ async def create_stories(db_name):
     # First get the last one record of the date(TEXT) from serpapi_data(Ex: 2025-10-03 15:29:02). Using this as a filter to get the same date records.
     cursor.execute('SELECT date FROM serpapi_data ORDER BY id DESC LIMIT 1')
     last_date = cursor.fetchone()
+
     if last_date:
         last_date = last_date[0]
         print(f"Last date found: {last_date}")
     else:
         print("No date found, proceeding without date filter.")
         last_date = None
+
+    # last_date just dates. Original format: 'YYYY-MM-DD HH:MM:SS'
+    last_date_date_only = last_date.split(' ')[0] if last_date else None
 
     # Now get records from serpapi_data with the last date, excluding categories '17-Sports' and removing duplicates based on 'query'
     cursor.execute('''
@@ -388,11 +392,11 @@ async def create_stories(db_name):
             SELECT 1 
             FROM main_news_data AS mnd
             JOIN serpapi_data AS sd_join ON mnd.serpapi_id = sd_join.id
-            WHERE sd_join.query = sd.query AND DATE(mnd.date) = ?
+            WHERE sd_join.query = sd.query AND SUBSTR(mnd.date, 1, 10) = ?
         )
     ORDER BY sd.id ASC 
     LIMIT ?
-    ''', (last_date, last_date, last_date, NUM_STORIES_TO_CREATE))
+    ''', (last_date, last_date, last_date_date_only, NUM_STORIES_TO_CREATE))
     rows = cursor.fetchall()
 
     # Get column names
@@ -597,13 +601,13 @@ def generate_sitemap(db_name):
 
 
 print(f"Starting program at: {datetime.now().strftime('%Y%m%d %H:%M:%S')}")
-res = get_trending_searches()
-res_json = json.dumps(res, indent=2)
-with open("trending_searches.json", "w") as file:
-    file.write(res_json)
-data = load_trending_searches("trending_searches.json")
 trends_data_db_name = 'trends_data.db'
-save_to_database(data, trends_data_db_name)
+# res = get_trending_searches()
+# res_json = json.dumps(res, indent=2)
+# with open("trending_searches.json", "w") as file:
+#     file.write(res_json)
+# data = load_trending_searches("trending_searches.json")
+# save_to_database(data, trends_data_db_name)
 asyncio.run(create_stories(trends_data_db_name))
 
 # Generate sitemap after all operations complete
