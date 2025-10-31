@@ -45,6 +45,13 @@ news_to_keywords_prompt = '''
 **Story:**\n
 '''
 
+# --- PROXY FIX ---
+# Tell urllib to not use any proxy settings from the system
+proxy_handler = urllib.request.ProxyHandler({})
+opener = urllib.request.build_opener(proxy_handler)
+urllib.request.install_opener(opener)
+# --- END PROXY FIX ---
+
 def create_news_to_keywords_prompt(keywords):
     return news_to_keywords_prompt.replace("{keywords}", keywords)
 

@@ -12,6 +12,13 @@ import re
 SERVER_ADDRESS = "127.0.0.1:8188"
 CLIENT_ID = str(uuid.uuid4())
 
+# --- PROXY FIX ---
+# Tell urllib to not use any proxy settings from the system
+proxy_handler = urllib.request.ProxyHandler({})
+opener = urllib.request.build_opener(proxy_handler)
+urllib.request.install_opener(opener)
+# --- END PROXY FIX ---
+
 # --- Helper Functions (from your code) ---
 
 def queue_prompt(prompt_workflow):
