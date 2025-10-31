@@ -163,7 +163,7 @@ def create_image(image_prompts, serpapi_record):
         ws.connect(f"ws://{SERVER_ADDRESS}/ws?clientId={client_id}")
         
         prompt_id = queue_prompt(prompt_workflow, client_id)['prompt_id']
-        print(f"Queued prompt with ID: {prompt_id}")
+        print(f"Queued imaging creation prompt with ID: {prompt_id}")
         
         # Wait for execution to finish
         while True:
