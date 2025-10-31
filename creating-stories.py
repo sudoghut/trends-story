@@ -9,7 +9,6 @@ import re
 import random
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import websocket
 import uuid
 import json
 import urllib.request
