@@ -41,7 +41,7 @@ news_to_keywords_prompt = '''
 * Do not include any explanations, introductions, or sentences — output only the keyword list.
 * Avoid any **prompt-engineering syntax** (e.g., weights, parameters, “–v”, “–ar”, etc.).
 * Output only a **clean, descriptive list of keywords** appropriate for Flux.1.
-* Begin the list with: WordArt stylized text design, hand-lettered typography: "{keywords}", small font size,
+* Begin the list with: "{keywords}" text, spelled correctly, WordArt stylized text design, hand-lettered typography, small clean modern font,
 **Story:**\n
 '''
 
