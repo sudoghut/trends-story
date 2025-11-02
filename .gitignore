@@ -1,3 +1,6 @@
 serp_token.txt
 trending_searches.json
 _trending_searches.json
+
+# skip vscode settings
+.vscode/
