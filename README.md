@@ -30,3 +30,5 @@ Steps: 5, Sampler: DPM++ 2M SGM Uniform, CFG scale: 1.0, Seed: 422, Size: 1024x1
 
 - [trend-story-interface](https://github.com/sudoghut/trend-story-interface)
 - [trend-story-api](https://github.com/sudoghut/trend-story-api)
+
+Note (2025-11-05): The project previously used LLM-based image generation, which required time-consuming quality control and review. To improve processing speed and simplify maintenance, the image generation code was replaced with a deterministic word-cloud-based generator. This approach produces consistent, fast visual placeholders while eliminating external LLM image service dependencies.

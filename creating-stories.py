@@ -3,25 +3,19 @@ import json
 import sqlite3
 import asyncio
 import websockets
-import websocket
 import time
 import os
 import re
-import random
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import uuid
-import json
-import urllib.request
-import urllib.parse
-import time
 import xml.etree.ElementTree as ET
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
 
 # New York timezone
 NY_TZ = ZoneInfo("America/New_York")
 
 SERP_API_TOKEN_FILE = "serp_token.txt"
-SERVER_ADDRESS = "127.0.0.1:8188"
 MAX_RETRIES = 4
 NUM_STORIES_TO_CREATE = 20
 # Get current time in New York timezone
@@ -32,28 +26,6 @@ TODAY_DD = now_ny.strftime("%d")
 TODAY_YYYYMMDD = now_ny.strftime("%Y%m%d")
 TODAY_HHMMSS = now_ny.strftime("%H%M%S")
 IMAGE_DIR = f"images/{TODAY_YYYY}/{TODAY_MM}/{TODAY_DD}"
-news_to_keywords_prompt = '''
-**Task:** Generate a set of `keywords` for an AI image generation model (**Flux.1**) to create **WordArt**.
-**Goal:** Design artistic text for the phrase **"{keywords}"**, visually expressing the **themes, emotions, and atmosphere** of the given story.
-**Guidelines:**
-* Focus on **aesthetic composition** and **emotional resonance** aligned with the story’s mood.
-* Include references to **art styles, materials, textures, color palettes, or lighting** to enrich the visual concept.
-* Do not include any explanations, introductions, or sentences — output only the keyword list.
-* Avoid any **prompt-engineering syntax** (e.g., weights, parameters, “–v”, “–ar”, etc.).
-* Output only a **clean, descriptive list of keywords** appropriate for Flux.1.
-* Begin the list with: "{keywords}" text, spelled correctly, WordArt stylized text design, hand-lettered typography: "{keywords}", small clean font,
-**Story:**\n
-'''
-
-# --- PROXY FIX ---
-# Tell urllib to not use any proxy settings from the system
-proxy_handler = urllib.request.ProxyHandler({})
-opener = urllib.request.build_opener(proxy_handler)
-urllib.request.install_opener(opener)
-# --- END PROXY FIX ---
-
-def create_news_to_keywords_prompt(keywords):
-    return news_to_keywords_prompt.replace("{keywords}", keywords)
 
 with open(SERP_API_TOKEN_FILE, "r") as file:
     api_key = file.read().strip()
@@ -118,104 +90,69 @@ def create_prompt_for_story_generation(serpapi_record):
         print("No relevant fields found in the record.")
         return None
 
-def queue_prompt(prompt_workflow, client_id):
-    """Sends the workflow to the ComfyUI server."""
-    p = {"prompt": prompt_workflow, "client_id": client_id}
-    data = json.dumps(p).encode('utf-8')
-    req = urllib.request.Request(f"http://{SERVER_ADDRESS}/prompt", data=data)
-    return json.loads(urllib.request.urlopen(req).read())
-
-def get_image(filename, subfolder, folder_type):
-    """Retrieves the generated image from the server."""
-    data = {"filename": filename, "subfolder": subfolder, "type": folder_type}
-    url_values = urllib.parse.urlencode(data)
-    with urllib.request.urlopen(f"http://{SERVER_ADDRESS}/view?{url_values}") as response:
-        return response.read()
-
-def get_history(prompt_id):
-    """Gets the execution history for a prompt."""
-    with urllib.request.urlopen(f"http://{SERVER_ADDRESS}/history/{prompt_id}") as response:
-        return json.loads(response.read())
-
-def create_image(image_prompts, serpapi_record):
-    """Create an image using ComfyUI based on the image prompts and serpapi record"""
-    client_id = str(uuid.uuid4())
+def create_image(all_queries, current_query, serpapi_record):
+    """Create a WordCloud image with all queries as background and current query highlighted
     
-    # Create image directory if it doesn't exist
-    os.makedirs(IMAGE_DIR, exist_ok=True)
+    Args:
+        all_queries: List of all query strings from the SQL results
+        current_query: The current story's query to be highlighted
+        serpapi_record: The serpapi record dictionary containing query and other info
     
-    # Load workflow from JSON file
+    Returns:
+        str: The filename of the saved image, or None if failed
+    """
     try:
-        with open("workflow.json", "r", encoding="utf-8") as f:
-            prompt_workflow = json.load(f)
-    except FileNotFoundError:
-        print("Error: workflow.json not found. Please save your workflow in that file.")
+        # Create image directory if it doesn't exist
+        os.makedirs(IMAGE_DIR, exist_ok=True)
+        
+        # Combine all queries into a single text corpus
+        text_corpus = ' '.join(all_queries)
+        
+        # Split current query into individual words for highlighting
+        highlight_words = set(current_query.lower().split())
+        
+        # Color function: grey for background words, vibrant color for highlighted words
+        def color_func(word, **kwargs):
+            if word.lower() in highlight_words:
+                return '#FF4500'  # Orange-red for highlighted words
+            return '#808080'  # Grey for background words
+        
+        # Generate wordcloud
+        wordcloud = WordCloud(
+            width=800,
+            height=400,
+            background_color='white',
+            random_state=42,  # Ensures consistent layout within each program run
+            colormap=None,  # We'll use custom color function
+            relative_scaling=0.5,
+            min_font_size=10
+        ).generate(text_corpus)
+        
+        # Apply custom colors
+        wordcloud.recolor(color_func=color_func)
+        
+        # Create filename
+        query_sanitized = sanitize_filename(serpapi_record.get("query", "unknown"))
+        filename = f"{query_sanitized}_{TODAY_YYYYMMDD}_{TODAY_HHMMSS}.png"
+        filepath = os.path.join(IMAGE_DIR, filename)
+        
+        # Save the wordcloud image
+        plt.figure(figsize=(10, 5))
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis('off')
+        plt.tight_layout(pad=0)
+        plt.savefig(filepath, dpi=100, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Successfully created WordCloud image: {filepath}")
+        return filename
+        
+    except ImportError:
+        print("Error: wordcloud library not installed. Please install it with: pip install wordcloud")
         return None
-    
-    # Modify the prompt in node "6"
-    prompt_workflow["6"]["inputs"]["text"] = f"{image_prompts}"
-    # prompt_workflow["6"]["inputs"]["text"] = f"(Style: flat illustration, crosshatching), {image_prompts}"
-    
-    # Modify the seed in node "31" (KSampler) - use random seed for variation
-    prompt_workflow["31"]["inputs"]["seed"] = random.randint(0, 999999999999999)
-    
-    # Create filename
-    query_sanitized = sanitize_filename(serpapi_record.get("query", "unknown"))
-    filename_prefix = f"{query_sanitized}_{TODAY_YYYYMMDD}_{TODAY_HHMMSS}"
-    prompt_workflow["9"]["inputs"]["filename_prefix"] = filename_prefix
-    
-    # Connect and queue the prompt
-    ws = websocket.WebSocket()
-    try:
-        ws.connect(f"ws://{SERVER_ADDRESS}/ws?clientId={client_id}")
-        
-        prompt_id = queue_prompt(prompt_workflow, client_id)['prompt_id']
-        print(f"Queued imaging creation prompt with ID: {prompt_id}")
-        
-        # Wait for execution to finish
-        while True:
-            out = ws.recv()
-            if isinstance(out, str):
-                message = json.loads(out)
-                if message['type'] == 'executing':
-                    data = message['data']
-                    # Check for the final "executed" message for our prompt
-                    if data.get('node') is None and data.get('prompt_id') == prompt_id:
-                        print("Execution finished.")
-                        break
-            else:
-                # This handles binary preview images, which we can ignore
-                continue
-        
-        # Fetch the output image(s)
-        history = get_history(prompt_id)[prompt_id]
-        saved_filename = None
-        
-        for node_id in history['outputs']:
-            node_output = history['outputs'][node_id]
-            if 'images' in node_output:
-                for image in node_output['images']:
-                    image_data = get_image(image['filename'], image['subfolder'], image['type'])
-                    # Create the final filename with .png extension
-                    final_filename = f"{filename_prefix}.png"
-                    final_filepath = os.path.join(IMAGE_DIR, final_filename)
-                    
-                    # Save the image
-                    with open(final_filepath, "wb") as img_file:
-                        img_file.write(image_data)
-                        print(f"Successfully saved image: {final_filepath}")
-                        saved_filename = final_filename
-                        break
-                if saved_filename:
-                    break
-        
-        return saved_filename
-        
     except Exception as e:
-        print(f"An error occurred during image creation: {e}")
+        print(f"An error occurred during WordCloud image creation: {e}")
         return None
-    finally:
-        ws.close()
 
 def save_image_to_database(filename):
     """Save image filename to image_data table and return the image_id"""
@@ -256,7 +193,7 @@ async def ws_send_prompt(prompt, system_prompt):
 
             # Collect all responses from the server
             async for message in websocket:
-                # print("Received:", message)
+                print("Received:", message)
                 try:
                     parsed_message = json.loads(message)
                     if parsed_message.get("type") == "result":
@@ -380,34 +317,37 @@ async def create_stories(db_name):
     # Now get records from serpapi_data with the last date, excluding categories '17-Sports' and removing duplicates based on 'query'
     cursor.execute('''
     SELECT * FROM serpapi_data AS sd
-    WHERE 
+    WHERE
         -- Condition 1: Process only the latest batch of data
-        sd.date = ? 
+        sd.date = ?
 
         -- Condition 2: Exclude news where the category is exclusively '17-Sports'
         AND sd.categories != '17-Sports'
         
         -- Condition 3: Deduplicate queries within the current batch
         AND sd.id IN (
-            SELECT MIN(id) FROM serpapi_data 
+            SELECT MIN(id) FROM serpapi_data
             WHERE date = ? AND categories != '17-Sports'
             GROUP BY query
         )
         
         -- Condition 4: Exclude queries that have already been processed today
         AND NOT EXISTS (
-            SELECT 1 
+            SELECT 1
             FROM main_news_data AS mnd
             JOIN serpapi_data AS sd_join ON mnd.serpapi_id = sd_join.id
             WHERE sd_join.query = sd.query AND SUBSTR(mnd.date, 1, 10) = ?
         )
-    ORDER BY sd.id ASC 
+    ORDER BY sd.id ASC
     LIMIT ?
     ''', (last_date, last_date, last_date_date_only, NUM_STORIES_TO_CREATE))
     rows = cursor.fetchall()
 
     # Get column names
     col_names = [desc[0] for desc in cursor.description]
+    
+    # Extract all queries for WordCloud corpus
+    all_queries = [dict(zip(col_names, row))['query'] for row in rows]
 
     counter = 0
 
@@ -428,26 +368,18 @@ async def create_stories(db_name):
         prompt_for_generating_story = create_prompt_for_story_generation(record)
         # Create story
         story = await call_api_with_retry(prompt_for_generating_story)
-        prompt_for_generating_image_prompts = create_news_to_keywords_prompt(query) + story
-        # Pause for 5s
-        await asyncio.sleep(5)
-        # Create image prompts
-        image_prompts = await call_api_with_retry(prompt_for_generating_image_prompts)
         
-        # Create image
+        # Create image using WordCloud
         image_id = None
-        if image_prompts:
-            try:
-                image_filename = create_image(image_prompts, record)
-                if image_filename:
-                    image_id = save_image_to_database(image_filename)
-                else:
-                    print(f"Failed to create image for serpapi_id: {serpapi_id}")
-            except Exception as e:
-                print(f"Error creating image for serpapi_id: {serpapi_id}: {e}")
-                raise Exception(f"Image creation failed for serpapi_id: {serpapi_id}. Reason: {str(e)}")
-        else:
-            raise Exception(f"No image prompts generated for serpapi_id: {serpapi_id}")
+        try:
+            image_filename = create_image(all_queries, query, record)
+            if image_filename:
+                image_id = save_image_to_database(image_filename)
+            else:
+                print(f"Failed to create image for serpapi_id: {serpapi_id}")
+        except Exception as e:
+            print(f"Error creating image for serpapi_id: {serpapi_id}: {e}")
+            raise Exception(f"Image creation failed for serpapi_id: {serpapi_id}. Reason: {str(e)}")
 
         if story:
             save_story_to_database(story, serpapi_id, image_id)
