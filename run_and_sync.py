@@ -271,8 +271,13 @@ def perform_git_operations(config, logger):
             logger.error("Failed to update remote URL")
             return False
         
-        # Step 4: Stage changes
+        # Step 4: Stage changes (excluding runtime files that should be ignored)
         logger.info("Step 4: Staging changes")
+        # First, ensure .run.lock and logs/ are not tracked if they exist
+        subprocess.run("git rm --cached .run.lock 2>nul", shell=True, cwd=str(BASE_DIR))
+        subprocess.run("git rm --cached -r logs/ 2>nul", shell=True, cwd=str(BASE_DIR))
+        
+        # Stage all changes except ignored files
         if not run_git_command("git add .", logger):
             logger.error("Failed to stage changes")
             return False
@@ -306,7 +311,13 @@ def perform_git_operations(config, logger):
             logger.error("Failed to fetch from origin")
             return False
         
-        logger.info("Step 8: Rebasing on origin/main")
+        logger.info("Step 8: Cleaning unstaged changes to ignored files before rebase")
+        # Discard any local changes to .run.lock and logs/ to prevent rebase conflicts
+        subprocess.run("git checkout -- .run.lock 2>nul", shell=True, cwd=str(BASE_DIR))
+        subprocess.run("git checkout -- logs/ 2>nul", shell=True, cwd=str(BASE_DIR))
+        subprocess.run("git clean -fd logs/ 2>nul", shell=True, cwd=str(BASE_DIR))
+        
+        logger.info("Step 9: Rebasing on origin/main")
         result = subprocess.run(
             "git rebase origin/main",
             shell=True,
@@ -325,8 +336,8 @@ def perform_git_operations(config, logger):
         
         logger.info("Rebase completed successfully")
         
-        # Step 9: Push changes
-        logger.info("Step 9: Pushing to origin/main")
+        # Step 10: Push changes
+        logger.info("Step 10: Pushing to origin/main")
         if not run_git_command("git push origin main", logger, retry=True):
             logger.error("Failed to push changes")
             return False
