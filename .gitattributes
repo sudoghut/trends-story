@@ -1,5 +1,11 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
+# Shell scripts must use LF line endings (for Docker/Linux compatibility)
+*.sh text eol=lf
+
+# Python scripts should use LF (for Docker/Linux compatibility)
+*.py text eol=lf
+
 # skip vscode settings folder
 .vscode/ export-ignore
