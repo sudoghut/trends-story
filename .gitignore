@@ -14,3 +14,4 @@ config.yaml
 .run.lock       # Lockfile to prevent concurrent executions
 .last_run       # Timestamp file tracking last successful run
 logs/           # Log files directory
+nul             # Windows command artifact from testing

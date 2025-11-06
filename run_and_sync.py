@@ -249,14 +249,8 @@ def perform_git_operations(config, logger):
     logger.info("=" * 60)
     
     try:
-        # Step 1: Clean workspace
-        logger.info("Step 1: Cleaning workspace")
-        if not run_git_command("git checkout .", logger):
-            logger.error("Failed to clean workspace")
-            return False
-        
-        # Step 2: Configure git user
-        logger.info("Step 2: Configuring git user")
+        # Step 1: Configure git user
+        logger.info("Step 1: Configuring git user")
         if not run_git_command(f'git config user.name "{config["git_user_name"]}"', logger):
             logger.error("Failed to configure git user name")
             return False
@@ -264,20 +258,28 @@ def perform_git_operations(config, logger):
             logger.error("Failed to configure git user email")
             return False
         
-        # Step 3: Update remote URL with token
-        logger.info("Step 3: Updating git remote URL")
+        # Step 2: Update remote URL with token
+        logger.info("Step 2: Updating git remote URL")
         remote_url = f"https://{config['git_token']}@github.com/sudoghut/trends-story.git"
         if not run_git_command(f'git remote set-url origin {remote_url}', logger):
             logger.error("Failed to update remote URL")
             return False
         
-        # Step 4: Stage changes (excluding runtime files that should be ignored)
-        logger.info("Step 4: Staging changes")
-        # First, ensure .run.lock and logs/ are not tracked if they exist
-        subprocess.run("git rm --cached .run.lock 2>nul", shell=True, cwd=str(BASE_DIR))
-        subprocess.run("git rm --cached -r logs/ 2>nul", shell=True, cwd=str(BASE_DIR))
+        # Step 3: Remove runtime files from git tracking (if they were previously tracked)
+        logger.info("Step 3: Ensuring runtime files are not tracked")
+        subprocess.run(
+            ["git", "rm", "--cached", "--ignore-unmatch", ".run.lock"],
+            cwd=str(BASE_DIR),
+            capture_output=True
+        )
+        subprocess.run(
+            ["git", "rm", "--cached", "-r", "--ignore-unmatch", "logs/"],
+            cwd=str(BASE_DIR),
+            capture_output=True
+        )
         
-        # Stage all changes except ignored files
+        # Step 4: Stage changes (gitignore will automatically exclude ignored files)
+        logger.info("Step 4: Staging changes")
         if not run_git_command("git add .", logger):
             logger.error("Failed to stage changes")
             return False
@@ -305,18 +307,21 @@ def perform_git_operations(config, logger):
             logger.info("No changes to commit, skipping commit step")
             return True
         
-        # Step 7: Fetch and rebase
+        # Step 7: Fetch from origin
         logger.info("Step 7: Fetching from origin")
         if not run_git_command("git fetch origin main", logger, retry=True):
             logger.error("Failed to fetch from origin")
             return False
         
-        logger.info("Step 8: Cleaning unstaged changes to ignored files before rebase")
-        # Discard any local changes to .run.lock and logs/ to prevent rebase conflicts
-        subprocess.run("git checkout -- .run.lock 2>nul", shell=True, cwd=str(BASE_DIR))
-        subprocess.run("git checkout -- logs/ 2>nul", shell=True, cwd=str(BASE_DIR))
-        subprocess.run("git clean -fd logs/ 2>nul", shell=True, cwd=str(BASE_DIR))
+        # Step 8: Reset any uncommitted changes before rebase
+        logger.info("Step 8: Resetting uncommitted changes before rebase")
+        subprocess.run(
+            ["git", "reset", "--hard", "HEAD"],
+            cwd=str(BASE_DIR),
+            capture_output=True
+        )
         
+        # Step 9: Rebase on origin/main
         logger.info("Step 9: Rebasing on origin/main")
         result = subprocess.run(
             "git rebase origin/main",
