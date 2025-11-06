@@ -127,6 +127,13 @@ CMD []
 #
 # Requirements:
 #   - The repository must be mounted as a volume at /app/trends-story
-#   - config.yaml must exist with run_mode and cron_schedule configured
+#   - config.yaml must exist on the HOST (not in the image) with run_mode and
+#     cron_schedule configured. Create it from config.example.yaml:
+#       cp config.example.yaml config.yaml
+#       # Edit config.yaml and add your git_token
 #   - entrypoint.sh must be present in the repository root
+#
+# IMPORTANT: config.yaml is gitignored and contains sensitive credentials.
+# It must be created manually on each deployment environment and mounted
+# into the container via the volume mount.
 # ==============================================================================

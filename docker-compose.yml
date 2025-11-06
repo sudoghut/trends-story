@@ -30,10 +30,21 @@ services:
     # Volume mounts
     # Binds the current directory to /app/trends-story in the container
     # This ensures config.yaml, logs/, images/, and all repository files are accessible
+    #
+    # IMPORTANT: config.yaml must exist on the host before starting the container
+    # Copy config.example.yaml to config.yaml and fill in your credentials:
+    #   cp config.example.yaml config.yaml
+    #   # Then edit config.yaml with your git_token and settings
     volumes:
       - type: bind
         source: .
         target: /app/trends-story
+      # Explicitly mount config.yaml to ensure it's available
+      # This provides better error messages if the file is missing
+      - type: bind
+        source: ./config.yaml
+        target: /app/trends-story/config.yaml
+        read_only: true
     
     # Environment variables
     environment:
@@ -135,7 +146,10 @@ services:
 # Configuration Notes:
 # ==============================================================================
 #
-# 1. Ensure config.yaml exists in the repository root before starting
+# 1. CRITICAL: Create config.yaml before starting the container:
+#    cp config.example.yaml config.yaml
+#    Then edit config.yaml and add your git_token and other settings
+#
 # 2. For scheduled mode: set run_mode: scheduled in config.yaml
 # 3. For immediate mode: set run_mode: immediate in config.yaml
 #    and change restart policy to 'no'
@@ -143,5 +157,11 @@ services:
 # 5. Add API keys and credentials as environment variables or in config.yaml
 # 6. The container will automatically create logs/ and images/ directories
 # 7. Git operations inside container require proper credentials configuration
+#
+# Troubleshooting:
+# - If you get "Config file not found" error, ensure config.yaml exists
+#   in the repository root directory (same directory as docker-compose.yml)
+# - config.yaml is gitignored for security, so it must be created manually
+#   on each deployment environment
 #
 # ==============================================================================
