@@ -4,3 +4,13 @@ _trending_searches.json
 
 # skip vscode settings
 .vscode/
+
+# Configuration files with sensitive credentials
+# Users should copy config.example.yaml to config.yaml and add their tokens
+config.yaml
+
+# Docker runtime files
+# These files are created during container execution and should not be committed
+.run.lock       # Lockfile to prevent concurrent executions
+.last_run       # Timestamp file tracking last successful run
+logs/           # Log files directory

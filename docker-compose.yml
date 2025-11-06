@@ -1,0 +1,147 @@
+# ==============================================================================
+# Trends Story - Docker Compose Configuration
+# ==============================================================================
+# This Docker Compose file provides easy deployment and management of the
+# trends-story container for automated trending story generation.
+#
+# Purpose:
+#   - Simplifies container deployment with predefined configurations
+#   - Manages volume mounts, environment variables, and logging
+#   - Supports both scheduled (continuous) and immediate (one-time) execution
+#
+# Requirements:
+#   - config.yaml must exist in the repository root before starting
+#   - Docker and Docker Compose must be installed
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # Main trends-story service
+  trends-story:
+    # Build configuration
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    
+    # Container name for easy identification
+    container_name: trends-story-automation
+    
+    # Volume mounts
+    # Binds the current directory to /app/trends-story in the container
+    # This ensures config.yaml, logs/, images/, and all repository files are accessible
+    volumes:
+      - type: bind
+        source: .
+        target: /app/trends-story
+    
+    # Environment variables
+    environment:
+      # Timezone configuration (adjust as needed)
+      - TZ=America/New_York
+      # Add additional environment variables here if needed:
+      # - SERPAPI_KEY=${SERPAPI_KEY}
+      # - GIT_USER_NAME=${GIT_USER_NAME}
+      # - GIT_USER_EMAIL=${GIT_USER_EMAIL}
+    
+    # Restart policy
+    # 'unless-stopped' keeps the container running for scheduled mode
+    # Change to 'no' for immediate mode (run once and exit)
+    restart: unless-stopped
+    
+    # Health check configuration
+    # Monitors container health by checking .last_run file timestamp
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/trends-story/.last_run && test $$(find /app/trends-story/.last_run -mmin -1440 2>/dev/null | wc -l) -gt 0 || exit 1"]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Logging configuration
+    # Prevents log files from consuming excessive disk space
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==============================================================================
+  # Alternative service configuration for immediate mode (commented out)
+  # ==============================================================================
+  # Uncomment this section to run in immediate mode for testing
+  # This will execute the script once and exit
+  #
+  # trends-story-immediate:
+  #   build:
+  #     context: .
+  #     dockerfile: ./Dockerfile
+  #   
+  #   container_name: trends-story-immediate
+  #   
+  #   volumes:
+  #     - type: bind
+  #       source: .
+  #       target: /app/trends-story
+  #   
+  #   environment:
+  #     - TZ=America/New_York
+  #   
+  #   # No restart policy for immediate mode
+  #   restart: "no"
+  #   
+  #   logging:
+  #     driver: json-file
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
+
+# ==============================================================================
+# Common Usage Commands:
+# ==============================================================================
+#
+# Build the image:
+#   docker-compose build
+#
+# Start in background (scheduled mode):
+#   docker-compose up -d
+#
+# Start in foreground (see live output):
+#   docker-compose up
+#
+# View logs:
+#   docker-compose logs -f
+#   docker-compose logs -f --tail=100
+#
+# Stop the container:
+#   docker-compose down
+#
+# Restart the container:
+#   docker-compose restart
+#
+# Check container status:
+#   docker-compose ps
+#
+# Execute commands in running container:
+#   docker-compose exec trends-story bash
+#
+# View cron logs inside container:
+#   docker-compose exec trends-story cat /var/log/trends-story/cron.log
+#
+# Rebuild and restart:
+#   docker-compose up -d --build
+#
+# ==============================================================================
+# Configuration Notes:
+# ==============================================================================
+#
+# 1. Ensure config.yaml exists in the repository root before starting
+# 2. For scheduled mode: set run_mode: scheduled in config.yaml
+# 3. For immediate mode: set run_mode: immediate in config.yaml
+#    and change restart policy to 'no'
+# 4. Adjust TZ environment variable to match your timezone
+# 5. Add API keys and credentials as environment variables or in config.yaml
+# 6. The container will automatically create logs/ and images/ directories
+# 7. Git operations inside container require proper credentials configuration
+#
+# ==============================================================================

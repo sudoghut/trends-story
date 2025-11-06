@@ -1,0 +1,68 @@
+# ============================================================================
+# Trends Story Configuration Example
+# ============================================================================
+# This is a template configuration file. Copy this file to 'config.yaml' and
+# update the values with your actual credentials.
+#
+# IMPORTANT: Never commit config.yaml to git! It contains sensitive tokens.
+# ============================================================================
+
+# GitHub Personal Access Token for authentication
+# Required for pushing changes to the repository
+# 
+# How to get your token:
+# 1. Go to: https://github.com/settings/tokens
+# 2. Click "Generate new token" → "Generate new token (classic)"
+# 3. Give it a descriptive name (e.g., "Trends Story Bot")
+# 4. Select expiration period (or "No expiration" if you manage it carefully)
+# 5. Required scopes/permissions:
+#    - For public repositories: Select 'public_repo'
+#    - For private repositories: Select 'repo' (full control)
+# 6. Click "Generate token" and copy it immediately (you won't see it again!)
+# 7. Paste the token below, replacing the placeholder
+git_token: "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN_HERE"
+
+# Run mode determines how the container operates
+# Options:
+#   "scheduled" - Runs continuously on the cron schedule below
+#                 Use this for automated, recurring updates
+#                 Container stays running and executes on schedule
+#   
+#   "immediate" - Runs once immediately and then exits
+#                 Use this for manual/one-time runs or testing
+#                 Container stops after completing one execution
+run_mode: "scheduled"
+
+# Cron schedule in America/New_York timezone
+# Format: minute hour day month weekday
+# Can use 5 fields (as shown) or 6 fields (with seconds as first field)
+# 
+# Field breakdown (5-field format):
+#   minute:  0-59
+#   hour:    0-23 (24-hour format, in America/New_York timezone)
+#   day:     1-31
+#   month:   1-12
+#   weekday: 0-7 (0 and 7 are both Sunday)
+#
+# Special characters:
+#   *  - Any value (matches all)
+#   ,  - List of values (e.g., "1,15" for 1st and 15th)
+#   -  - Range of values (e.g., "1-5" for Monday through Friday)
+#   /  - Step values (e.g., "*/2" for every 2 units)
+#
+# Example schedules:
+#   "0 5,16 * * *"  - Runs at 5:00 AM and 4:00 PM NY time daily (default)
+#   "0 */6 * * *"   - Runs every 6 hours
+#   "0 0 * * *"     - Runs at midnight daily
+#   "30 8 * * 1-5"  - Runs at 8:30 AM on weekdays only
+#   "0 */4 * * *"   - Runs every 4 hours
+#   "0 9,12,15,18 * * *" - Runs at 9 AM, 12 PM, 3 PM, and 6 PM daily
+#
+# Current default: Runs at 5:00 AM and 4:00 PM NY time every day
+cron_schedule: "0 5,16 * * *"
+
+# Optional: Git user configuration for commits
+# These are used when the bot makes commits to the repository
+# If not specified, defaults will be used
+git_user_name: "Trends Story Bot"
+git_user_email: "bot@trends-story.local"
