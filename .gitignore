@@ -11,7 +11,11 @@ config.yaml
 
 # Docker runtime files
 # These files are created during container execution and should not be committed
-.run.lock       # Lockfile to prevent concurrent executions
-.last_run       # Timestamp file tracking last successful run
-logs/           # Log files directory
-nul             # Windows command artifact from testing
+# Lockfile to prevent concurrent executions
+.run.lock
+# Timestamp file tracking last successful run
+.last_run
+# Log files directory
+logs/
+# Windows command artifact from testing
+nul
