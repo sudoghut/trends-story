@@ -277,12 +277,41 @@ def perform_git_operations(config, logger):
             cwd=str(BASE_DIR),
             capture_output=True
         )
+        subprocess.run(
+            ["git", "rm", "--cached", "--ignore-unmatch", ".last_run"],
+            cwd=str(BASE_DIR),
+            capture_output=True
+        )
         
-        # Step 4: Stage changes (gitignore will automatically exclude ignored files)
+        # Step 4: Stage changes (explicitly exclude ignored files)
         logger.info("Step 4: Staging changes")
-        if not run_git_command("git add .", logger):
-            logger.error("Failed to stage changes")
-            return False
+        # Add all files except those in .gitignore
+        subprocess.run(
+            ["git", "add", "--all", "--"],
+            cwd=str(BASE_DIR),
+            capture_output=True
+        )
+        # Explicitly unstage any ignored files that were added
+        subprocess.run(
+            ["git", "reset", "HEAD", ".run.lock"],
+            cwd=str(BASE_DIR),
+            capture_output=True
+        )
+        subprocess.run(
+            ["git", "reset", "HEAD", "logs/"],
+            cwd=str(BASE_DIR),
+            capture_output=True
+        )
+        subprocess.run(
+            ["git", "reset", "HEAD", ".last_run"],
+            cwd=str(BASE_DIR),
+            capture_output=True
+        )
+        subprocess.run(
+            ["git", "reset", "HEAD", "nul"],
+            cwd=str(BASE_DIR),
+            capture_output=True
+        )
         
         # Step 5: Check if there are changes to commit
         logger.info("Step 5: Checking for changes")
