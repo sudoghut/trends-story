@@ -109,6 +109,18 @@ validate_python_env() {
 validate_config() {
     log "Validating configuration file..."
     
+    # Debug: List files in base directory
+    log "DEBUG: Listing files in $BASE_DIR:"
+    ls -la "$BASE_DIR" 2>&1 | head -20 | while read line; do log "  $line"; done
+    
+    # Debug: Check if config file exists
+    log "DEBUG: Checking for config file at: $CONFIG_FILE"
+    if [ -f "$CONFIG_FILE" ]; then
+        log "DEBUG: Config file EXISTS"
+    else
+        log "DEBUG: Config file DOES NOT EXIST"
+    fi
+    
     if [ ! -f "$CONFIG_FILE" ]; then
         log_error "Config file not found at $CONFIG_FILE"
         exit 1
