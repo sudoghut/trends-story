@@ -39,12 +39,16 @@ services:
       - type: bind
         source: .
         target: /app/trends-story
+        bind:
+          selinux: z
       # Explicitly mount config.yaml to ensure it's available
       # This provides better error messages if the file is missing
       - type: bind
         source: ./config.yaml
         target: /app/trends-story/config.yaml
         read_only: true
+        bind:
+          selinux: z
     
     # Environment variables
     environment:
@@ -94,6 +98,8 @@ services:
   #     - type: bind
   #       source: .
   #       target: /app/trends-story
+  #       bind:
+  #         selinux: z
   #   
   #   environment:
   #     - TZ=America/New_York
