@@ -271,6 +271,13 @@ def perform_git_operations(config, logger):
     logger.info("=" * 60)
     
     try:
+        # Step 0: Mark directory as safe for git (needed for mounted volumes)
+        logger.info("Step 0: Marking directory as safe for git")
+        subprocess.run(
+            ["git", "config", "--global", "--add", "safe.directory", str(BASE_DIR)],
+            capture_output=True
+        )
+        
         # Step 1: Configure git user
         logger.info("Step 1: Configuring git user")
         if not run_git_command(f'git config user.name "{config["git_user_name"]}"', logger):
