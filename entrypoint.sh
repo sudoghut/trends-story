@@ -24,11 +24,8 @@ log_warning() {
     echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] ${YELLOW}WARNING${NC}: $1"
 }
 
-# Configuration
+# Initial configuration - will be updated after reading config
 CONFIG_FILE="/app/trends-story/config.yaml"
-WRAPPER_SCRIPT="/app/trends-story/run_and_sync.py"
-LOGS_DIR="/app/trends-story/logs"
-LOCK_DIR="/app/trends-story"
 
 # Signal handling for graceful shutdown
 cleanup() {
@@ -40,6 +37,49 @@ cleanup() {
 }
 
 trap cleanup SIGTERM SIGINT
+
+# Get base directory from config file
+get_base_dir() {
+    python3 << 'EOF'
+import yaml
+import sys
+import os
+
+config_paths = [
+    "/app/trends-story/config.yaml",
+    "./config.yaml",
+    os.path.join(os.getcwd(), "config.yaml")
+]
+
+for config_path in config_paths:
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r') as f:
+                config = yaml.safe_load(f)
+            base_dir = config.get('base_dir', '/app/trends-story')
+            print(base_dir)
+            sys.exit(0)
+        except Exception:
+            continue
+
+# Default fallback
+print('/app/trends-story')
+EOF
+}
+
+# Initialize paths based on config
+initialize_paths() {
+    local base_dir=$(get_base_dir)
+    
+    # Update global variables
+    BASE_DIR="$base_dir"
+    CONFIG_FILE="$base_dir/config.yaml"
+    WRAPPER_SCRIPT="$base_dir/run_and_sync.py"
+    LOGS_DIR="$base_dir/logs"
+    LOCK_DIR="$base_dir"
+    
+    log "Initialized with base directory: $BASE_DIR"
+}
 
 # Clean up stale lock files (older than 30 minutes)
 cleanup_stale_locks() {
@@ -80,7 +120,7 @@ import sys
 import yaml
 
 try:
-    with open('$CONFIG_FILE', 'r') as f:
+    with open('${CONFIG_FILE}', 'r') as f:
         config = yaml.safe_load(f)
     
     # Check required fields
@@ -132,9 +172,9 @@ get_config_value() {
     local key=$1
     python3 << EOF
 import yaml
-with open('$CONFIG_FILE', 'r') as f:
+with open('${CONFIG_FILE}', 'r') as f:
     config = yaml.safe_load(f)
-print(config.get('$key', ''))
+print(config.get('${key}', ''))
 EOF
 }
 
@@ -163,6 +203,7 @@ display_startup_summary() {
     log "=================================="
     log "   Trends Story Container Start"
     log "=================================="
+    log "Base Directory: $BASE_DIR"
     log "Run Mode: $run_mode"
     log "Config Location: $CONFIG_FILE"
     log "Timezone: $timezone"
@@ -227,7 +268,7 @@ run_scheduled_mode() {
     # Create crontab entry that redirects output to stdout/stderr
     (
         echo -e "$env_vars"
-        echo "$cron_schedule cd /app/trends-story && python3 $WRAPPER_SCRIPT >> /proc/1/fd/1 2>> /proc/1/fd/2"
+        echo "$cron_schedule cd $BASE_DIR && python3 $WRAPPER_SCRIPT >> /proc/1/fd/1 2>> /proc/1/fd/2"
     ) | crontab -
     
     log_success "Cron job installed"
@@ -244,6 +285,9 @@ run_scheduled_mode() {
 # Main execution
 main() {
     log "Starting Trends Story entrypoint script..."
+    
+    # Initialize paths from config
+    initialize_paths
     
     # Cleanup stale locks
     cleanup_stale_locks

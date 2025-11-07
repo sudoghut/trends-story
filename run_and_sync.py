@@ -15,8 +15,30 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 import json
 
-# Constants
-BASE_DIR = Path("/app/trends-story")
+# Load base directory from config
+def get_base_dir_from_config():
+    """Get base directory from config file."""
+    config_paths = [
+        "/app/trends-story/config.yaml",
+        "./config.yaml",
+        Path.cwd() / "config.yaml"
+    ]
+    
+    for config_path in config_paths:
+        config_path = Path(config_path)
+        if config_path.exists():
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = yaml.safe_load(f)
+                return Path(config.get('base_dir', '/app/trends-story'))
+            except Exception:
+                continue
+    
+    # Default fallback
+    return Path("/app/trends-story")
+
+# Initialize paths from config
+BASE_DIR = get_base_dir_from_config()
 LOCKFILE = BASE_DIR / ".run.lock"
 LAST_RUN_FILE = BASE_DIR / ".last_run"
 CONFIG_FILE = BASE_DIR / "config.yaml"

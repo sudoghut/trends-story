@@ -7,6 +7,12 @@
 # IMPORTANT: Never commit config.yaml to git! It contains sensitive tokens.
 # ============================================================================
 
+# Base directory for the application
+# This is where all scripts, config files, and data are located
+# Default: /app/trends-story (for Docker)
+# For local development, you might use: /path/to/your/trends-story
+base_dir: "/app/trends-story"
+
 # GitHub Personal Access Token for authentication
 # Required for pushing changes to the repository
 # 
