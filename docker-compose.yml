@@ -36,19 +36,11 @@ services:
     #   cp config.example.yaml config.yaml
     #   # Then edit config.yaml with your git_token and settings
     volumes:
-      - type: bind
-        source: .
-        target: /app/trends-story
-        bind:
-          selinux: z
+      # Mount the entire project directory with SELinux context
+      - .:/app/trends-story:z
       # Explicitly mount config.yaml to ensure it's available
       # This provides better error messages if the file is missing
-      - type: bind
-        source: ./config.yaml
-        target: /app/trends-story/config.yaml
-        read_only: true
-        bind:
-          selinux: z
+      - ./config.yaml:/app/trends-story/config.yaml:z
     
     # Environment variables
     environment:
