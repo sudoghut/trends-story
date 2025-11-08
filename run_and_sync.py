@@ -271,15 +271,43 @@ def perform_git_operations(config, logger):
     logger.info("=" * 60)
     
     try:
-        # Step 0: Mark directory as safe for git (needed for mounted volumes)
-        logger.info("Step 0: Marking directory as safe for git")
+        # Step 0: Verify we're in a git repository
+        logger.info("Step 0: Verifying git repository")
+        git_dir = BASE_DIR / ".git"
+        
+        if not git_dir.exists():
+            logger.error(f"Not a git repository: {BASE_DIR}")
+            logger.error("The .git directory does not exist. This typically happens when:")
+            logger.error("  1. The repository was not properly cloned")
+            logger.error("  2. The volume mount doesn't include the .git directory")
+            logger.error("  3. Running in a non-git directory")
+            logger.error("Skipping git operations.")
+            return False
+        
+        # Verify git is functional in this directory
+        result = subprocess.run(
+            ["git", "rev-parse", "--git-dir"],
+            cwd=str(BASE_DIR),
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            logger.error(f"Git repository verification failed: {result.stderr.strip()}")
+            logger.error("Skipping git operations.")
+            return False
+        
+        logger.info(f"Git repository verified at: {BASE_DIR}")
+        
+        # Step 1: Mark directory as safe for git (needed for mounted volumes)
+        logger.info("Step 1: Marking directory as safe for git")
         subprocess.run(
             ["git", "config", "--global", "--add", "safe.directory", str(BASE_DIR)],
             capture_output=True
         )
         
-        # Step 1: Configure git user
-        logger.info("Step 1: Configuring git user")
+        # Step 2: Configure git user
+        logger.info("Step 2: Configuring git user")
         if not run_git_command(f'git config user.name "{config["git_user_name"]}"', logger):
             logger.error("Failed to configure git user name")
             return False
@@ -287,15 +315,15 @@ def perform_git_operations(config, logger):
             logger.error("Failed to configure git user email")
             return False
         
-        # Step 2: Update remote URL with token
-        logger.info("Step 2: Updating git remote URL")
+        # Step 3: Update remote URL with token
+        logger.info("Step 3: Updating git remote URL")
         remote_url = f"https://{config['git_token']}@github.com/sudoghut/trends-story.git"
         if not run_git_command(f'git remote set-url origin {remote_url}', logger):
             logger.error("Failed to update remote URL")
             return False
         
-        # Step 3: Remove runtime files from git tracking (if they were previously tracked)
-        logger.info("Step 3: Ensuring runtime files are not tracked")
+        # Step 4: Remove runtime files from git tracking (if they were previously tracked)
+        logger.info("Step 4: Ensuring runtime files are not tracked")
         subprocess.run(
             ["git", "rm", "--cached", "--ignore-unmatch", ".run.lock"],
             cwd=str(BASE_DIR),
@@ -312,8 +340,8 @@ def perform_git_operations(config, logger):
             capture_output=True
         )
         
-        # Step 4: Stage changes (explicitly exclude ignored files)
-        logger.info("Step 4: Staging changes")
+        # Step 5: Stage changes (explicitly exclude ignored files)
+        logger.info("Step 5: Staging changes")
         # Add all files except those in .gitignore
         subprocess.run(
             ["git", "add", "--all", "--"],
@@ -342,8 +370,8 @@ def perform_git_operations(config, logger):
             capture_output=True
         )
         
-        # Step 5: Check if there are changes to commit
-        logger.info("Step 5: Checking for changes")
+        # Step 6: Check if there are changes to commit
+        logger.info("Step 6: Checking for changes")
         result = subprocess.run(
             "git diff --cached --quiet",
             shell=True,
@@ -357,7 +385,7 @@ def perform_git_operations(config, logger):
             ny_date = datetime.datetime.now(ny_tz)
             commit_msg = f"Update news {ny_date.strftime('%Y%m%d')}"
             
-            logger.info(f"Step 6: Creating commit: {commit_msg}")
+            logger.info(f"Step 7: Creating commit: {commit_msg}")
             if not run_git_command(f'git commit -m "{commit_msg}"', logger):
                 logger.error("Failed to create commit")
                 return False
@@ -365,22 +393,22 @@ def perform_git_operations(config, logger):
             logger.info("No changes to commit, skipping commit step")
             return True
         
-        # Step 7: Fetch from origin
-        logger.info("Step 7: Fetching from origin")
+        # Step 8: Fetch from origin
+        logger.info("Step 8: Fetching from origin")
         if not run_git_command("git fetch origin main", logger, retry=True):
             logger.error("Failed to fetch from origin")
             return False
         
-        # Step 8: Reset any uncommitted changes before rebase
-        logger.info("Step 8: Resetting uncommitted changes before rebase")
+        # Step 9: Reset any uncommitted changes before rebase
+        logger.info("Step 9: Resetting uncommitted changes before rebase")
         subprocess.run(
             ["git", "reset", "--hard", "HEAD"],
             cwd=str(BASE_DIR),
             capture_output=True
         )
         
-        # Step 9: Rebase on origin/main
-        logger.info("Step 9: Rebasing on origin/main")
+        # Step 10: Rebase on origin/main
+        logger.info("Step 10: Rebasing on origin/main")
         result = subprocess.run(
             "git rebase origin/main",
             shell=True,
@@ -399,8 +427,8 @@ def perform_git_operations(config, logger):
         
         logger.info("Rebase completed successfully")
         
-        # Step 10: Push changes
-        logger.info("Step 10: Pushing to origin/main")
+        # Step 11: Push changes
+        logger.info("Step 11: Pushing to origin/main")
         if not run_git_command("git push origin main", logger, retry=True):
             logger.error("Failed to push changes")
             return False
