@@ -84,8 +84,29 @@ def create_prompt_for_story_generation(serpapi_record):
         story_parts.append(f"and related details: `{serpapi_record['trend_breakdown']}`")
     
     if story_parts:
-        story = ", ".join(story_parts) + ". Based on this information and real-world context, explain in plain, simple words the background and reasons why these keywords are trending, so that someone with no prior knowledge can easily understand. Do not repeat the information that I provided; instead, generate only the background and reasons directly."
-        return story
+        keyword_summary = ", ".join(story_parts) + "."
+        format_instructions = """
+Based on this information and real-world context, generate a concise news brief explaining why these keywords are trending.
+Your audience has no prior knowledge of the topic.
+
+Structure your response *exactly* as follows, using these specific headers in Markdown:
+
+### Summary (tl;dr)
+[A one or two-sentence summary of the main point.]
+
+### Essential Background
+[Briefly provide the key context or background needed to understand the topic. What happened before this?]
+
+### The Full Story
+[Explain the current event or situation. What is happening *right now* and why is it trending today?]
+
+### Why It Matters
+[Explain the significance of this trend. Why are people concerned, interested, or searching for this? What are the implications?]
+
+Generate *only* this structured response. Do not repeat the input keywords I provided."""
+        
+        # Combine the keyword summary and the detailed format instructions
+        return f"{keyword_summary}\n\n{format_instructions}"
     else:
         print("No relevant fields found in the record.")
         return None
