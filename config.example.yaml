@@ -1,31 +1,11 @@
-# ============================================================================
-# Trends Story Configuration Example
-# ============================================================================
-# This is a template configuration file. Copy this file to 'config.yaml' and
-# update the values with your actual credentials.
-#
-# IMPORTANT: Never commit config.yaml to git! It contains sensitive tokens.
-# ============================================================================
-
 # Base directory for the application
 # This is where all scripts, config files, and data are located
-# Default: /app/trends-story (for Docker)
-# For local development, you might use: /path/to/your/trends-story
 base_dir: "/app/trends-story"
 
 # GitHub Personal Access Token for authentication
 # Required for pushing changes to the repository
-# 
-# How to get your token:
-# 1. Go to: https://github.com/settings/tokens
-# 2. Click "Generate new token" → "Generate new token (classic)"
-# 3. Give it a descriptive name (e.g., "Trends Story Bot")
-# 4. Select expiration period (or "No expiration" if you manage it carefully)
-# 5. Required scopes/permissions:
-#    - For public repositories: Select 'public_repo'
-#    - For private repositories: Select 'repo' (full control)
-# 6. Click "Generate token" and copy it immediately (you won't see it again!)
-# 7. Paste the token below, replacing the placeholder
+# Get your token from: https://github.com/settings/tokens
+# Token needs 'repo' scope for private repositories or 'public_repo' for public ones
 git_token: "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN_HERE"
 
 # Run mode determines how the container operates
@@ -66,9 +46,3 @@ run_mode: "scheduled"
 #
 # Current default: Runs at 5:00 AM and 4:00 PM NY time every day
 cron_schedule: "0 5,16 * * *"
-
-# Optional: Git user configuration for commits
-# These are used when the bot makes commits to the repository
-# If not specified, defaults will be used
-git_user_name: "Trends Story Bot"
-git_user_email: "bot@trends-story.local"

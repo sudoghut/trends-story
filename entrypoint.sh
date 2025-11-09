@@ -182,6 +182,10 @@ EOF
 configure_git() {
     log "Configuring git..."
     
+    # Fix dubious ownership error for mounted volumes
+    log "Adding safe.directory exception for $BASE_DIR"
+    git config --global --add safe.directory "$BASE_DIR"
+    
     local git_token=$(get_config_value "git_token")
     local git_user=$(get_config_value "git_user" || echo "Trends Story Bot")
     local git_email=$(get_config_value "git_email" || echo "bot@trends-story.local")
