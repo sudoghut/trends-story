@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 import xml.etree.ElementTree as ET
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
+import platform
 
 # New York timezone
 NY_TZ = ZoneInfo("America/New_York")
@@ -44,6 +45,66 @@ def sanitize_filename(filename):
     sanitized = sanitized.strip('-')
     # Limit length to avoid filesystem issues
     return sanitized[:100]
+
+def detect_font_path():
+    """Detect available font paths for WordCloud with UTF-8 support
+    
+    Returns:
+        str: Path to the best available font, or None if no suitable font found
+    """
+    # Font paths to check in order of preference
+    font_candidates = [
+        # Google Noto fonts (best Unicode support)
+        '/usr/share/fonts/google-noto/NotoSans-Regular.ttf',
+        '/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf',
+        '/System/Library/Fonts/Helvetica.ttc',  # macOS
+        'C:/Windows/Fonts/arial.ttf',  # Windows
+        
+        # DejaVu fonts (good fallback)
+        '/usr/share/fonts/dejavu/DejaVuSans.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        '/System/Library/Fonts/Helvetica.ttc',  # macOS fallback
+        'C:/Windows/Fonts/calibri.ttf',  # Windows fallback
+        
+        # Liberation fonts (final option)
+        '/usr/share/fonts/liberation/LiberationSans-Regular.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+    ]
+    
+    # Check each font path
+    for font_path in font_candidates:
+        if os.path.exists(font_path):
+            print(f"Found suitable font: {font_path}")
+            return font_path
+    
+    # Platform-specific fallbacks
+    system = platform.system().lower()
+    if system == 'windows':
+        # Try common Windows fonts
+        windows_fonts = [
+            'C:/Windows/Fonts/arial.ttf',
+            'C:/Windows/Fonts/calibri.ttf',
+            'C:/Windows/Fonts/tahoma.ttf',
+            'C:/Windows/Fonts/verdana.ttf'
+        ]
+        for font_path in windows_fonts:
+            if os.path.exists(font_path):
+                print(f"Found Windows font: {font_path}")
+                return font_path
+    elif system == 'darwin':  # macOS
+        # Try common macOS fonts
+        macos_fonts = [
+            '/System/Library/Fonts/Helvetica.ttc',
+            '/System/Library/Fonts/Arial.ttf',
+            '/Library/Fonts/Arial.ttf'
+        ]
+        for font_path in macos_fonts:
+            if os.path.exists(font_path):
+                print(f"Found macOS font: {font_path}")
+                return font_path
+    
+    print("Warning: No suitable font found. WordCloud will use system default.")
+    return None
 
 def get_trending_searches():
     params = {
@@ -138,16 +199,40 @@ def create_image(all_queries, current_query, serpapi_record):
                 return '#FF4500'  # Orange-red for highlighted words
             return '#808080'  # Grey for background words
         
-        # Generate wordcloud
-        wordcloud = WordCloud(
-            width=800,
-            height=400,
-            background_color='white',
-            random_state=42,  # Ensures consistent layout within each program run
-            colormap=None,  # We'll use custom color function
-            relative_scaling=0.5,
-            min_font_size=10
-        ).generate(text_corpus)
+        # Detect and configure font path for UTF-8 support
+        font_path = detect_font_path()
+        
+        # Generate wordcloud with font configuration
+        wordcloud_params = {
+            'width': 800,
+            'height': 400,
+            'background_color': 'white',
+            'random_state': 42,  # Ensures consistent layout within each program run
+            'colormap': None,  # We'll use custom color function
+            'relative_scaling': 0.5,
+            'min_font_size': 10,
+            'max_words': 200,  # Limit words for better performance
+            'prefer_horizontal': 0.9,  # Prefer horizontal text
+        }
+        
+        # Add font path if available
+        if font_path:
+            wordcloud_params['font_path'] = font_path
+            print(f"Using font: {font_path}")
+        else:
+            print("Using system default font (may have limited Unicode support)")
+        
+        try:
+            wordcloud = WordCloud(**wordcloud_params).generate(text_corpus)
+        except Exception as font_error:
+            print(f"Font-related error occurred: {font_error}")
+            # Fallback: try without custom font
+            if 'font_path' in wordcloud_params:
+                print("Retrying without custom font...")
+                del wordcloud_params['font_path']
+                wordcloud = WordCloud(**wordcloud_params).generate(text_corpus)
+            else:
+                raise font_error
         
         # Apply custom colors
         wordcloud.recolor(color_func=color_func)

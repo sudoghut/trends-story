@@ -40,6 +40,13 @@ RUN dnf update -y && \
     tzdata \
     findutils \
     procps-ng \
+    google-noto-sans-fonts \
+    google-noto-cjk-fonts \
+    google-noto-emoji-fonts \
+    dejavu-sans-fonts \
+    dejavu-serif-fonts \
+    liberation-sans-fonts \
+    liberation-serif-fonts \
     && dnf clean all \
     && rm -rf /var/cache/dnf/*
 
