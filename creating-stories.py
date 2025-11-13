@@ -474,6 +474,10 @@ async def create_stories(db_name):
         prompt_for_generating_story = create_prompt_for_story_generation(record)
         # Create story
         story = await call_api_with_retry(prompt_for_generating_story)
+
+        if story is None:
+            print(f"Failed to create story for serpapi_id: {serpapi_id}, skipping image creation.")
+            continue
         
         # Create image using WordCloud
         image_id = None
