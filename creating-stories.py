@@ -147,24 +147,27 @@ def create_prompt_for_story_generation(serpapi_record):
     if story_parts:
         keyword_summary = ", ".join(story_parts) + "."
         format_instructions = """
-Based on this information and real-world context, generate a concise news brief explaining why these keywords are trending.
-Your audience has no prior knowledge of the topic.
+        Based on this information and real-world context, generate a concise news brief explaining why these keywords are trending.
+        Your audience has no prior knowledge of the topic.
 
-Structure your response *exactly* as follows, using these specific headers in Markdown:
+        Structure your response *exactly* as follows, using these specific headers in Markdown:
 
-### Summary (tl;dr)
-[A one or two-sentence summary of the main point.]
+        ### Summary (tl;dr)
+        [A one or two-sentence summary of the main point.]
 
-### Essential Background
-[Briefly provide the key context or background needed to understand the topic. What happened before this?]
+        ### Essential Background
+        [Briefly provide the key context or background needed to understand the topic. What happened before this?]
 
-### The Full Story
-[Explain the current event or situation. What is happening *right now* and why is it trending today?]
+        ### The Full Story
+        [Explain the current event or situation. What is happening *right now* and why is it trending today?]
 
-### Why It Matters
-[Explain the significance of this trend. Why are people concerned, interested, or searching for this? What are the implications?]
+        ### Why It Matters
+        [Explain the significance of this trend. Why are people concerned, interested, or searching for this? What are the implications?]
 
-Generate *only* this structured response. Do not repeat the input keywords I provided."""
+        ### Geographic Location
+        [Extract all relevant geographic information from the topic. List each administrative level from most specific to broadest (city/town; county/district; state/province; country). Separate different levels with semicolons (;). If multiple locations are involved, list each location on a new line. If no geographical information is present or relevant, write "None".]
+
+        Generate *only* this structured response. Do not repeat the input keywords I provided."""
         
         # Combine the keyword summary and the detailed format instructions
         return f"{keyword_summary}\n\n{format_instructions}"
