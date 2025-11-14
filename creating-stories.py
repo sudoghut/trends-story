@@ -165,9 +165,30 @@ def create_prompt_for_story_generation(serpapi_record):
         [Explain the significance of this trend. Why are people concerned, interested, or searching for this? What are the implications?]
 
         ### Geographic Location
-        [Extract all relevant geographic information from the topic. List each administrative level from most specific to broadest (city/town; county/district; state/province; country). Separate different levels with semicolons (;). If multiple locations are involved, list each location on a new line. If no geographical information is present or relevant, write "None".]
+        [Extract all relevant geographic information from the topic. List each administrative level from most specific to broadest (city/town, county/district, state/province, country). Separate different administrative levels with comma (,). If multiple locations are involved, list each location on a new line as a bullet point.
 
-        Generate *only* this structured response. Do not repeat the input keywords I provided."""
+        For each location, use parentheses () to briefly explain its relationship to the news event (e.g., "where the event occurred", "origin of the person/organization", "affected area", "location of response", "headquarters location", "impact zone", etc.). 
+
+        **Format:** Location hierarchy (relationship to news)
+
+        **Guidelines:**
+        - Use the most specific location available and work outward to broader administrative divisions
+        - Include all relevant administrative levels that provide meaningful context
+        - For international events, always include the country
+        - For US events, include city, county (if relevant), state, and country
+        - For other countries, follow their administrative structure (city, province/region, country)
+        - If a location spans multiple areas, list each separately
+        - Prioritize locations by their importance to the story
+
+        **Examples:**
+        - Austin, Travis County, Texas, United States (where the tech conference is being held)
+        - San Francisco, California, United States (headquarters of the organizing company)
+        - London, Greater London, England, United Kingdom (location of the announcement)
+        - Tokyo, Tokyo Prefecture, Japan (affected market)
+        - Multiple states across the Midwest, United States (path of the storm system)
+
+        If no geographical information is present or relevant, write "None".]
+        """
         
         # Combine the keyword summary and the detailed format instructions
         return f"{keyword_summary}\n\n{format_instructions}"
