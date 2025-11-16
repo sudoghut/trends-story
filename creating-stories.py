@@ -165,21 +165,62 @@ def create_prompt_for_story_generation(serpapi_record):
         [Explain the significance of this trend. Why are people concerned, interested, or searching for this? What are the implications?]
 
         ### Geographic Location
-        [Extract the specific location where the news event actually occurred. List each administrative level from most specific to broadest (street address/venue, city/town, county/district, state/province, country). Separate different administrative levels with comma (,). If there is no specific location, write "None". If multiple event locations are involved, list each location on a new line as a bullet point, and use parentheses to indicate which event corresponds to which location.]
+
+        [Extract only the specific locations that are directly central to the news event. Focus on where the main action occurred, not tangential or background locations.]
+
+        **Required Format:**
+        - **[Most specific location], [City/Town], [County/District (if applicable)], [State/Province], [Country]** (event description)
 
         **Guidelines:**
+        - Each location must be on its own line as a bullet point
+        - Always include an event description in parentheses explaining what happened at that location
+        - **Only include locations where significant events directly related to the news actually occurred**
         - Use the most specific location available and work outward to broader administrative divisions
+        - List only distinct event locations - do not list multiple neighborhoods within the same city unless different significant events occurred there
         - For international events, always include the country
         - For US events, include city, county (if relevant), state, and country
         - For other countries, follow their administrative structure (city, province/region, country)
-        - If a location spans multiple areas, list each separately
+        - If the event spans a large region (like multiple counties affected by a wildfire), list the region once with the affected area in the event description
+        - If there is no specific physical location, write "None"
+
+        **What to Include:**
+        - ✅ Where the main event happened (crime scene, announcement location, disaster area)
+        - ✅ Where key legal proceedings occurred (courthouse, police station)
+        - ✅ Where important related events took place (arrest location if different from crime scene)
+
+        **What to Exclude:**
+        - ❌ Where someone was born (unless it's a biographical piece where birthplace is the focus)
+        - ❌ Past residences not relevant to current events
+        - ❌ Corporate headquarters unless the event happened there
+        - ❌ General jurisdictions without specific events
+        - ❌ Every affected neighborhood in a regional event - consolidate instead
 
         **Examples:**
-        - Single location: "Capitol Building, Washington, D.C., District of Columbia, United States (congressional hearing)"
-        - Multiple locations: 
-            - Tokyo, Kanto Region, Japan (summit meeting)
-            - Berlin, Berlin State, Germany (protest)
-        - Virtual event: "Virtual/Online (headquarters: San Francisco, California, United States)"
+
+        *Single location:*
+        - Capitol Building, Washington, D.C., District of Columbia, United States (congressional hearing)
+
+        *Multiple distinct locations with different events:*
+        - Tokyo, Kanto Region, Japan (summit meeting)
+        - Berlin, Berlin State, Germany (solidarity protest held in response)
+
+        *Criminal case with multiple relevant locations:*
+        - Miami Beach, Miami-Dade County, Florida, United States (arrest outside smoke shop)
+        - Turner Guilford Knight Correctional Center, Miami-Dade County, Florida, United States (booking and detention)
+
+        *Regional event affecting multiple areas:*
+        - Los Angeles County, California, United States (wildfires affecting Altadena, Pacific Palisades, and surrounding areas)
+        - Ventura County, California, United States (fire spread to northern regions)
+
+        *Virtual event with physical headquarters:*
+        - Virtual/Online (company headquarters: San Francisco, San Francisco County, California, United States)
+
+        **Common Mistakes to Avoid:**
+        - ❌ Listing a person's birthplace and death location when the news is about a current event, not an obituary
+        - ❌ Including every county in a state when only one or two had significant events
+        - ❌ Listing multiple bullet points for the same event in nearby locations without explaining why
+        - ❌ Forgetting the event description in parentheses
+        - ❌ Missing line breaks between locations
         """
         
         # Combine the keyword summary and the detailed format instructions
