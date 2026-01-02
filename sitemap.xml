@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://trending.oopus.info/</loc>
-    <lastmod>2026-01-01</lastmod>
+    <lastmod>2026-01-02</lastmod>
   </url>
   <url>
     <loc>https://trending.oopus.info/date/20250918</loc>
@@ -323,5 +323,9 @@
   <url>
     <loc>https://trending.oopus.info/date/20260101</loc>
     <lastmod>2026-01-01</lastmod>
+  </url>
+  <url>
+    <loc>https://trending.oopus.info/date/20260102</loc>
+    <lastmod>2026-01-02</lastmod>
   </url>
 </urlset>
