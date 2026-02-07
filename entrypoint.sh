@@ -199,6 +199,72 @@ configure_git() {
     log_success "Git configured with user: $git_user <$git_email>"
 }
 
+# Optimize git repo: convert to shallow and clean up to save disk space
+optimize_git_repo() {
+    log "Optimizing git repository..."
+
+    # Backup untracked data files before any git reset
+    local backup_needed=false
+    if [ -d "$BASE_DIR/images" ] || [ -f "$BASE_DIR/trends_data.db" ]; then
+        backup_needed=true
+        log "Backing up data files before git optimization..."
+        if [ -d "$BASE_DIR/images" ]; then
+            cp -a "$BASE_DIR/images" /tmp/images_backup 2>/dev/null || true
+            log "  Backed up images/ directory"
+        fi
+        if [ -f "$BASE_DIR/trends_data.db" ]; then
+            cp "$BASE_DIR/trends_data.db" /tmp/trends_data.db.backup 2>/dev/null || true
+            log "  Backed up trends_data.db"
+        fi
+    fi
+
+    if [ ! -f "$BASE_DIR/.git/shallow" ]; then
+        log "Converting full clone to shallow (depth 1)..."
+        cd "$BASE_DIR"
+
+        local git_token=$(get_config_value "git_token")
+        local remote_url="https://${git_token}@github.com/sudoghut/trends-story.git"
+        git remote set-url origin "$remote_url"
+
+        git fetch --depth 1 origin main && \
+        git reset --hard origin/main && \
+        git reflog expire --expire=now --all && \
+        git gc --prune=now
+
+        if [ $? -eq 0 ]; then
+            log_success "Repository converted to shallow clone"
+        else
+            log_warning "Shallow conversion had issues, continuing anyway"
+        fi
+    else
+        log "Repository is already shallow, running cleanup..."
+        cd "$BASE_DIR"
+        git reflog expire --expire=now --all 2>/dev/null || true
+        git gc --prune=now 2>/dev/null || true
+        log_success "Git cleanup complete"
+    fi
+
+    # Restore backed up data files
+    if [ "$backup_needed" = true ]; then
+        log "Restoring data files after git optimization..."
+        if [ -d /tmp/images_backup ]; then
+            cp -a /tmp/images_backup "$BASE_DIR/images" 2>/dev/null || true
+            rm -rf /tmp/images_backup
+            log "  Restored images/ directory"
+        fi
+        if [ -f /tmp/trends_data.db.backup ]; then
+            cp /tmp/trends_data.db.backup "$BASE_DIR/trends_data.db" 2>/dev/null || true
+            rm -f /tmp/trends_data.db.backup
+            log "  Restored trends_data.db"
+        fi
+        log_success "Data files restored"
+    fi
+
+    # Report .git size
+    local git_size=$(du -sh "$BASE_DIR/.git" 2>/dev/null | cut -f1)
+    log "Current .git directory size: $git_size"
+}
+
 # Display startup summary
 display_startup_summary() {
     local run_mode=$(get_config_value "run_mode")
@@ -304,7 +370,10 @@ main() {
     
     # Configure git
     configure_git
-    
+
+    # Optimize git repository (convert to shallow, clean up)
+    optimize_git_repo
+
     # Display startup summary
     display_startup_summary
     

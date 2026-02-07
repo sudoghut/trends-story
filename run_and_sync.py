@@ -322,56 +322,16 @@ def perform_git_operations(config, logger):
             logger.error("Failed to update remote URL")
             return False
         
-        # Step 4: Remove runtime files from git tracking (if they were previously tracked)
-        logger.info("Step 4: Ensuring runtime files are not tracked")
-        subprocess.run(
-            ["git", "rm", "--cached", "--ignore-unmatch", ".run.lock"],
-            cwd=str(BASE_DIR),
-            capture_output=True
-        )
-        subprocess.run(
-            ["git", "rm", "--cached", "-r", "--ignore-unmatch", "logs/"],
-            cwd=str(BASE_DIR),
-            capture_output=True
-        )
-        subprocess.run(
-            ["git", "rm", "--cached", "--ignore-unmatch", ".last_run"],
-            cwd=str(BASE_DIR),
-            capture_output=True
-        )
-        
-        # Step 5: Stage changes (explicitly exclude ignored files)
-        logger.info("Step 5: Staging changes")
-        # Add all files except those in .gitignore
+        # Step 4: Stage changes (files in .gitignore are automatically excluded)
+        logger.info("Step 4: Staging changes")
         subprocess.run(
             ["git", "add", "--all", "--"],
             cwd=str(BASE_DIR),
             capture_output=True
         )
-        # Explicitly unstage any ignored files that were added
-        subprocess.run(
-            ["git", "reset", "HEAD", ".run.lock"],
-            cwd=str(BASE_DIR),
-            capture_output=True
-        )
-        subprocess.run(
-            ["git", "reset", "HEAD", "logs/"],
-            cwd=str(BASE_DIR),
-            capture_output=True
-        )
-        subprocess.run(
-            ["git", "reset", "HEAD", ".last_run"],
-            cwd=str(BASE_DIR),
-            capture_output=True
-        )
-        subprocess.run(
-            ["git", "reset", "HEAD", "nul"],
-            cwd=str(BASE_DIR),
-            capture_output=True
-        )
         
-        # Step 6: Check if there are changes to commit
-        logger.info("Step 6: Checking for changes")
+        # Step 5: Check if there are changes to commit
+        logger.info("Step 5: Checking for changes")
         result = subprocess.run(
             "git diff --cached --quiet",
             shell=True,
@@ -385,7 +345,7 @@ def perform_git_operations(config, logger):
             ny_date = datetime.datetime.now(ny_tz)
             commit_msg = f"Update news {ny_date.strftime('%Y%m%d')}"
             
-            logger.info(f"Step 7: Creating commit: {commit_msg}")
+            logger.info(f"Step 6: Creating commit: {commit_msg}")
             if not run_git_command(f'git commit -m "{commit_msg}"', logger):
                 logger.error("Failed to create commit")
                 return False
@@ -393,22 +353,22 @@ def perform_git_operations(config, logger):
             logger.info("No changes to commit, skipping commit step")
             return True
         
-        # Step 8: Fetch from origin
-        logger.info("Step 8: Fetching from origin")
-        if not run_git_command("git fetch origin main", logger, retry=True):
+        # Step 7: Fetch from origin (shallow to save space)
+        logger.info("Step 7: Fetching from origin (shallow)")
+        if not run_git_command("git fetch --depth 1 origin main", logger, retry=True):
             logger.error("Failed to fetch from origin")
             return False
         
-        # Step 9: Reset any uncommitted changes before rebase
-        logger.info("Step 9: Resetting uncommitted changes before rebase")
+        # Step 8: Reset any uncommitted changes before rebase
+        logger.info("Step 8: Resetting uncommitted changes before rebase")
         subprocess.run(
             ["git", "reset", "--hard", "HEAD"],
             cwd=str(BASE_DIR),
             capture_output=True
         )
         
-        # Step 10: Rebase on origin/main
-        logger.info("Step 10: Rebasing on origin/main")
+        # Step 9: Rebase on origin/main
+        logger.info("Step 9: Rebasing on origin/main")
         result = subprocess.run(
             "git rebase origin/main",
             shell=True,
@@ -427,12 +387,17 @@ def perform_git_operations(config, logger):
         
         logger.info("Rebase completed successfully")
         
-        # Step 11: Push changes
-        logger.info("Step 11: Pushing to origin/main")
+        # Step 10: Push changes
+        logger.info("Step 10: Pushing to origin/main")
         if not run_git_command("git push origin main", logger, retry=True):
             logger.error("Failed to push changes")
             return False
-        
+
+        # Step 11: Clean up git objects to prevent .git bloat
+        logger.info("Step 11: Cleaning up git objects")
+        run_git_command("git reflog expire --expire=now --all", logger)
+        run_git_command("git gc --prune=now", logger)
+
         logger.info("Git operations completed successfully")
         return True
         

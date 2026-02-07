@@ -5,6 +5,9 @@ _trending_searches.json
 # skip vscode settings
 .vscode/
 
+# Claude Code configuration
+.claude/
+
 # Configuration files with sensitive credentials
 # Users should copy config.example.yaml to config.yaml and add their tokens
 config.yaml
@@ -19,3 +22,7 @@ config.yaml
 logs/
 # Windows command artifact from testing
 nul
+
+# Binary data files (managed locally, not via git)
+images/
+trends_data.db
