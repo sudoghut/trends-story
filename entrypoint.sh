@@ -199,6 +199,28 @@ configure_git() {
     log_success "Git configured with user: $git_user <$git_email>"
 }
 
+# Validate that a file is a valid SQLite database
+validate_sqlite_file() {
+    local file_path="$1"
+    if [ ! -f "$file_path" ]; then
+        return 1
+    fi
+    local file_size=$(stat -c%s "$file_path" 2>/dev/null || stat -f%z "$file_path" 2>/dev/null)
+    if [ -z "$file_size" ] || [ "$file_size" -eq 0 ]; then
+        log_error "File is empty (0 bytes): $file_path"
+        return 1
+    fi
+    # SQLite files start with "SQLite format 3"
+    local header=$(head -c 16 "$file_path" 2>/dev/null)
+    if echo "$header" | grep -q "SQLite format 3"; then
+        log "  Validated: $file_path ($file_size bytes, valid SQLite)"
+        return 0
+    else
+        log_error "File is not a valid SQLite database: $file_path"
+        return 1
+    fi
+}
+
 # Optimize git repo: convert to shallow and clean up to save disk space
 optimize_git_repo() {
     log "Optimizing git repository..."
@@ -209,12 +231,35 @@ optimize_git_repo() {
         backup_needed=true
         log "Backing up data files before git optimization..."
         if [ -d "$BASE_DIR/images" ]; then
-            cp -a "$BASE_DIR/images" /tmp/images_backup 2>/dev/null || true
-            log "  Backed up images/ directory"
+            if cp -a "$BASE_DIR/images" /tmp/images_backup; then
+                log "  Backed up images/ directory"
+            else
+                log_error "Failed to backup images/ directory, aborting git optimization"
+                return 1
+            fi
         fi
         if [ -f "$BASE_DIR/trends_data.db" ]; then
-            cp "$BASE_DIR/trends_data.db" /tmp/trends_data.db.backup 2>/dev/null || true
-            log "  Backed up trends_data.db"
+            if validate_sqlite_file "$BASE_DIR/trends_data.db"; then
+                if cp "$BASE_DIR/trends_data.db" /tmp/trends_data.db.backup; then
+                    # Verify the backup copy is also valid
+                    if validate_sqlite_file /tmp/trends_data.db.backup; then
+                        log "  Backed up trends_data.db successfully"
+                    else
+                        log_error "Backup copy of trends_data.db is corrupted, aborting git optimization"
+                        rm -f /tmp/trends_data.db.backup
+                        rm -rf /tmp/images_backup
+                        return 1
+                    fi
+                else
+                    log_error "Failed to copy trends_data.db, aborting git optimization"
+                    rm -rf /tmp/images_backup
+                    return 1
+                fi
+            else
+                log_error "trends_data.db is invalid or empty, aborting git optimization to prevent data loss"
+                rm -rf /tmp/images_backup
+                return 1
+            fi
         fi
     fi
 
@@ -239,8 +284,8 @@ optimize_git_repo() {
     else
         log "Repository is already shallow, running cleanup..."
         cd "$BASE_DIR"
-        git reflog expire --expire=now --all 2>/dev/null || true
-        git gc --prune=now 2>/dev/null || true
+        git reflog expire --expire=now --all
+        git gc --prune=now
         log_success "Git cleanup complete"
     fi
 
@@ -248,14 +293,25 @@ optimize_git_repo() {
     if [ "$backup_needed" = true ]; then
         log "Restoring data files after git optimization..."
         if [ -d /tmp/images_backup ]; then
-            cp -a /tmp/images_backup "$BASE_DIR/images" 2>/dev/null || true
-            rm -rf /tmp/images_backup
-            log "  Restored images/ directory"
+            if cp -a /tmp/images_backup "$BASE_DIR/images"; then
+                rm -rf /tmp/images_backup
+                log "  Restored images/ directory"
+            else
+                log_error "Failed to restore images/ directory! Backup remains at /tmp/images_backup"
+            fi
         fi
         if [ -f /tmp/trends_data.db.backup ]; then
-            cp /tmp/trends_data.db.backup "$BASE_DIR/trends_data.db" 2>/dev/null || true
-            rm -f /tmp/trends_data.db.backup
-            log "  Restored trends_data.db"
+            if cp /tmp/trends_data.db.backup "$BASE_DIR/trends_data.db"; then
+                # Verify restored file is valid
+                if validate_sqlite_file "$BASE_DIR/trends_data.db"; then
+                    rm -f /tmp/trends_data.db.backup
+                    log "  Restored trends_data.db successfully"
+                else
+                    log_error "Restored trends_data.db is corrupted! Backup remains at /tmp/trends_data.db.backup"
+                fi
+            else
+                log_error "Failed to restore trends_data.db! Backup remains at /tmp/trends_data.db.backup"
+            fi
         fi
         log_success "Data files restored"
     fi

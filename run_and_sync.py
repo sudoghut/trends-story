@@ -14,6 +14,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 import json
+import shutil
+import sqlite3
 
 # Load base directory from config
 def get_base_dir_from_config():
@@ -264,12 +266,98 @@ def run_git_command(command, logger, cwd=None, retry=False):
     return False
 
 
+def backup_database(logger):
+    """Backup trends_data.db before git operations. Returns backup path or None."""
+    db_path = BASE_DIR / "trends_data.db"
+    backup_path = BASE_DIR / "trends_data.db.pre_git_backup"
+
+    if not db_path.exists():
+        logger.info("No trends_data.db found, skipping backup")
+        return None
+
+    # Validate file size
+    file_size = db_path.stat().st_size
+    if file_size == 0:
+        logger.error("trends_data.db is 0 bytes, skipping backup of empty file")
+        return None
+
+    # Validate it's a real SQLite database
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.execute("SELECT name FROM sqlite_master WHERE type='table' LIMIT 1")
+        conn.close()
+    except sqlite3.DatabaseError as e:
+        logger.error(f"trends_data.db is not a valid SQLite database: {e}")
+        return None
+
+    # Perform backup
+    try:
+        shutil.copy2(str(db_path), str(backup_path))
+    except Exception as e:
+        logger.error(f"Failed to backup trends_data.db: {e}")
+        return None
+
+    # Verify backup
+    backup_size = backup_path.stat().st_size
+    if backup_size != file_size:
+        logger.error(f"Backup size mismatch: original={file_size}, backup={backup_size}")
+        backup_path.unlink(missing_ok=True)
+        return None
+
+    logger.info(f"Backed up trends_data.db ({file_size} bytes) to {backup_path.name}")
+    return backup_path
+
+
+def restore_database_if_needed(backup_path, logger):
+    """Restore trends_data.db from backup if the current file is missing or corrupted."""
+    if backup_path is None:
+        return
+
+    db_path = BASE_DIR / "trends_data.db"
+
+    # Check if db is still valid
+    needs_restore = False
+    if not db_path.exists():
+        logger.warning("trends_data.db is missing after git operations")
+        needs_restore = True
+    elif db_path.stat().st_size == 0:
+        logger.warning("trends_data.db is 0 bytes after git operations")
+        needs_restore = True
+    else:
+        try:
+            conn = sqlite3.connect(str(db_path))
+            conn.execute("SELECT name FROM sqlite_master WHERE type='table' LIMIT 1")
+            conn.close()
+        except sqlite3.DatabaseError:
+            logger.warning("trends_data.db is corrupted after git operations")
+            needs_restore = True
+
+    if needs_restore:
+        try:
+            shutil.copy2(str(backup_path), str(db_path))
+            logger.info(f"Restored trends_data.db from backup ({backup_path.stat().st_size} bytes)")
+        except Exception as e:
+            logger.error(f"Failed to restore trends_data.db from backup: {e}")
+            logger.error(f"Manual recovery needed from: {backup_path}")
+            return
+
+    # Clean up backup
+    try:
+        backup_path.unlink(missing_ok=True)
+        logger.info("Removed pre-git backup file")
+    except Exception:
+        pass
+
+
 def perform_git_operations(config, logger):
     """Perform git operations after successful script execution."""
     logger.info("=" * 60)
     logger.info("Starting git operations")
     logger.info("=" * 60)
-    
+
+    # Backup database before any git operations
+    db_backup_path = backup_database(logger)
+
     try:
         # Step 0: Verify we're in a git repository
         logger.info("Step 0: Verifying git repository")
@@ -359,16 +447,8 @@ def perform_git_operations(config, logger):
             logger.error("Failed to fetch from origin")
             return False
         
-        # Step 8: Reset any uncommitted changes before rebase
-        logger.info("Step 8: Resetting uncommitted changes before rebase")
-        subprocess.run(
-            ["git", "reset", "--hard", "HEAD"],
-            cwd=str(BASE_DIR),
-            capture_output=True
-        )
-        
-        # Step 9: Rebase on origin/main
-        logger.info("Step 9: Rebasing on origin/main")
+        # Step 8: Rebase on origin/main
+        logger.info("Step 8: Rebasing on origin/main")
         result = subprocess.run(
             "git rebase origin/main",
             shell=True,
@@ -387,24 +467,26 @@ def perform_git_operations(config, logger):
         
         logger.info("Rebase completed successfully")
         
-        # Step 10: Push changes
-        logger.info("Step 10: Pushing to origin/main")
+        # Step 9: Push changes
+        logger.info("Step 9: Pushing to origin/main")
         if not run_git_command("git push origin main", logger, retry=True):
             logger.error("Failed to push changes")
             return False
 
-        # Step 11: Clean up git objects to prevent .git bloat
-        logger.info("Step 11: Cleaning up git objects")
+        # Step 10: Clean up git objects to prevent .git bloat
+        logger.info("Step 10: Cleaning up git objects")
         run_git_command("git reflog expire --expire=now --all", logger)
         run_git_command("git gc --prune=now", logger)
 
         logger.info("Git operations completed successfully")
+        restore_database_if_needed(db_backup_path, logger)
         return True
-        
+
     except Exception as e:
         logger.error(f"Git operations failed: {e}")
         import traceback
         logger.error(traceback.format_exc())
+        restore_database_if_needed(db_backup_path, logger)
         return False
 
 

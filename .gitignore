@@ -26,3 +26,4 @@ nul
 # Binary data files (managed locally, not via git)
 images/
 trends_data.db
+trends_data.db.pre_git_backup
